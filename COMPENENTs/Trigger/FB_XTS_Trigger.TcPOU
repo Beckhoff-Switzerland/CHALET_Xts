@@ -1,0 +1,290 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_Trigger" Id="{02a93845-db9f-4b7c-bd61-d2fad6262edc}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XTS_Trigger EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Trigger
+VAR
+	{attribute 'hide'}
+	bInitDone : BOOL;
+	{attribute 'hide'}
+	ipXtsSystem : I_XTS_System_Registration;
+	{attribute 'hide'}
+	ipListOfMoversToCheck : CHALET_BaseComponents.I_CH_LIST;
+	{attribute 'hide'}
+	fTriggerPositionOnTrack : LREAL;
+	{attribute 'hide'}
+	eTriggerDirection : Tc2_MC2.MC_Direction := MC_Positive_Direction;
+	{attribute 'hide'}
+	ipMoverAtTrigger : I_XTS_Mover;
+	{attribute 'hide'}	
+	fTrackLentgh : LREAL;
+	{attribute 'hide'}
+	aMoversPositionLastCycle : ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF LREAL; // This list is generated at the end of the PRG and contais the positions. The positions are checked in the next cycle
+	{attribute 'hide'}
+	aMoversInterfaceLastCycle : ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF I_XTS_Mover; // This list is generated at the end of the PRG and contais the Mover interface. The positions are checked in the next cycle
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="FB_init" Id="{adad8a7c-aaf4-4c3e-94e8-65d6026452ae}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object
+	
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
+IF bInitRetains THEN 
+	;
+END_IF
+
+//Regristrate object in System if unknown
+IF ipXtsSystem <> 0 AND THIS^.ipXtsSystem = 0 THEN
+	ipXtsSystem.RegisterTrigger(THIS^);
+	THIS^.ipXtsSystem := ipXtsSystem;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="HR" Id="{e989c05c-eee5-402e-b8fb-82af253b3ee7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT
+]]></Declaration>
+      <Get Name="Get" Id="{aac67db3-769f-4aff-84aa-c8376ce01697}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[///zzz todo]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{1f251d42-6be6-4cd7-a325-185e6b8196cf}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.ipXtsSystem = 0 THEN
+	//No valide interface
+	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+//Store track information
+THIS^.fTrackLentgh := THIS^.ipXtsSystem.TrackLength;
+
+IF (THIS^.ipListOfMoversToCheck <> 0) AND (THIS^.fTrackLentgh > 0.0) THEN
+	THIS^.bInitDone := TRUE;
+	Initialize := S_OK;
+ELSE
+	Initialize := E_FAIL;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="ListOfMoversToCheck" Id="{6ae5b261-75f6-4d30-a7cb-3397f332b68a}">
+      <Declaration><![CDATA[PROPERTY ListOfMoversToCheck : I_CH_List]]></Declaration>
+      <Set Name="Set" Id="{7b80b811-6c11-4f6d-a04d-8ab5209e826c}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF ListOfMoversToCheck <> 0 THEN
+	ipListOfMoversToCheck := ListOfMoversToCheck;
+END_IF
+]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="MoverAtTrigger" Id="{10e078e5-78e6-41c7-8622-7c83de4ee893}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverAtTrigger : I_XTS_Mover
+]]></Declaration>
+      <Get Name="Get" Id="{a92d0274-1b05-4ad0-a7cc-21dbad4641fa}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
+
+MoverAtTrigger := ipMoverAtTrigger;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="MoverDetected" Id="{1ce6ac2d-16d2-4d00-a9e5-0ddbef16e964}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverDetected : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{d5c88e99-f15d-45db-9f5a-36933e518c24}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
+
+MoverDetected := (ipMoverAtTrigger <> 0);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{bd810339-b4cd-492f-9fae-ec6addcabbf1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{6edab273-a6f8-4ef7-8246-53be56ba066e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[PositionOnTrack := fTriggerPositionOnTrack;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{ea830381-d175-4f93-8507-3eb1c2056367}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[fTriggerPositionOnTrack := PositionOnTrack;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Prepare" Id="{3eedc520-140f-4996-bd97-13ed21f351af}">
+      <Declaration><![CDATA[(* Time-critical information is processed here, which can then be polled via the property every cycle. 
+The update method is usually at the end of the program and then it is already 'outdated'. *)
+METHOD PRIVATE Prepare : HRESULT
+VAR
+	fMoverActPos,fMoverLastPos : LREAL;
+	fRangePositive, fRangeNegative : LREAL;
+	bMoverWasInRangeNeg, bMoverWasInRangePos, bMoverIsInRangeNeg, bMoverIsInRangePos : BOOL;
+	nLoopIndex : UINT;
+END_VAR
+VAR_INST
+	{attribute 'hide'}
+	nLastUpdatedCycleCount : UDINT;
+END_VAR
+VAR CONSTANT
+	cMaxMoveDistPerCycle : LREAL := 4000.0 * 20.0 / 1000.0 * 1.1; //4 m/s(max. XTS speed) * 20ms(max realistic SPS cycle time) + 10%
+END_VAR
+
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check if this Cycle the dates are allready prepared
+IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount THEN
+	nLastUpdatedCycleCount := TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskIndex].CycleCount;
+
+	//Clear last stored Mover if an new cycle has started
+	THIS^.ipMoverAtTrigger := 0;
+	
+	//Check old list of Moverspositions and compare them to the current position of the same mover.
+	//Set Trigger if the Mover pass the Station
+	fRangePositive := LMOD(lr_Value:=(THIS^.fTriggerPositionOnTrack + cMaxMoveDistPerCycle + THIS^.fTrackLentgh),lr_Arg:= THIS^.fTrackLentgh);
+	fRangeNegative := LMOD(lr_Value:=(THIS^.fTriggerPositionOnTrack - cMaxMoveDistPerCycle + THIS^.fTrackLentgh),lr_Arg:= THIS^.fTrackLentgh);
+	
+	FOR nLoopIndex := 0 TO (XtsParameterlist.MAX_MOVER_PER_SYSTEM-1) DO
+		IF aMoversInterfaceLastCycle[nLoopIndex] <> 0 THEN
+			fMoverActPos :=  aMoversInterfaceLastCycle[nLoopIndex].PositionOnTrack;
+			fMoverLastPos:=  aMoversPositionLastCycle[nLoopIndex];
+			
+			
+			//Test if the the Mover was in Trigger-100mm Range(without exact the trigger point) and is now in Trigger+100 Range(with exact the trigger point)
+			bMoverWasInRangePos	:= FUN_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverLastPos, fMaximum:=fRangePositive) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
+			bMoverWasInRangeNeg	:= FUN_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverLastPos, fMaximum:=THIS^.fTriggerPositionOnTrack) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
+			bMoverIsInRangePos 	:= FUN_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverActPos, fMaximum:=fRangePositive); 
+			bMoverIsInRangeNeg 	:= FUN_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverActPos, fMaximum:=THIS^.fTriggerPositionOnTrack); 
+		
+			IF eTriggerDirection = MC_Positive_Direction AND bMoverWasInRangeNeg AND bMoverIsInRangePos THEN
+				THIS^.ipMoverAtTrigger := aMoversInterfaceLastCycle[nLoopIndex];
+				RETURN;
+			ELSIF eTriggerDirection = MC_Negative_Direction AND bMoverIsInRangeNeg AND bMoverWasInRangePos THEN
+				THIS^.ipMoverAtTrigger := aMoversInterfaceLastCycle[nLoopIndex];
+				RETURN;	
+			END_IF
+			
+		END_IF
+	END_FOR
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TimeStamp" Id="{9052612c-be12-4c1f-9534-10f28f711159}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TimeStamp : Tc2_EtherCAT.T_DCTIME64
+]]></Declaration>
+      <Get Name="Get" Id="{b127e485-108a-42b8-b568-8eba182eeea2}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Prepare();//Prepare Time-critical information
+
+///zzz todo exact time stamp calculatioin
+ IF ipMoverAtTrigger <> 0 THEN
+	 TimeStamp := F_GetCurDcTaskTime64();
+ ELSE
+	 TimeStamp := 0;
+ END_IF
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TriggerDirection" Id="{c4f30c41-44bf-406a-85c3-eddaa253e8b6}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TriggerDirection : Tc2_MC2.MC_Direction
+]]></Declaration>
+      <Get Name="Get" Id="{75c916a6-2303-4178-9416-bd577d58aa18}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TriggerDirection := eTriggerDirection;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{f4ab88df-2d5c-4c0a-a5f6-6a8069e287a8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF TriggerDirection = MC_Positive_Direction OR TriggerDirection = MC_Negative_Direction THEN
+	eTriggerDirection := TriggerDirection;
+END_IF]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Update" Id="{e0137974-eaf3-41d2-91c7-f616eb825b1d}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR
+	nIndex : UINT;
+	ipMover : I_XTS_Mover;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Force to do an init befor call update
+IF NOT bInitDone THEN
+	THIS^.Initialize();
+	RETURN;
+END_IF
+
+//Clear array
+MEMSET(destAddr:=ADR(aMoversInterfaceLastCycle),n:=SIZEOF(aMoversInterfaceLastCycle),fillByte:=0);
+MEMSET(destAddr:=ADR(aMoversPositionLastCycle),n:=SIZEOF(aMoversPositionLastCycle),fillByte:=0);
+
+nIndex := 0;
+THIS^.ipListOfMoversToCheck.ResetIterator();
+WHILE THIS^.ipListOfMoversToCheck.HasNextObject() DO
+	
+	//Cheack all Movers fill the actposition in the array
+	IF ToMover(THIS^.ipListOfMoversToCheck.GetNextObject(),ipMover) THEN
+		aMoversInterfaceLastCycle[nIndex] := ipMover;
+		aMoversPositionLastCycle[nIndex] := ipMover.PositionOnTrack;
+		nIndex := nIndex +1;
+	END_IF
+	
+END_WHILE	]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_ProductData" Id="{b7c8d922-6b95-463f-8fba-50d11aed9918}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_XTS_ProductData EXTENDS FB_CH_Object IMPLEMENTS I_XTS_ProductData
+VAR
+	{attribute 'hide'}
+	ipMover : I_XTS_Mover_PLC;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Property Name="LinkedMover" Id="{27f09d4c-ac22-4fb9-9105-9d60a58f369b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LinkedMover : I_XTS_Mover_PLC]]></Declaration>
+      <Get Name="Get" Id="{a2572553-6700-48b2-a60d-a0943cf8183e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LinkedMover := ipMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="LinkToMover" Id="{581bbb03-aa96-4e6b-a211-8286a1396e89}">
+      <Declaration><![CDATA[METHOD LinkToMover : BOOL //it is not necessary to call this method. This is already done internally
+VAR_INPUT
+	ipMoverPlc : I_XTS_Mover_PLC;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.ipMover := ipMoverPlc;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

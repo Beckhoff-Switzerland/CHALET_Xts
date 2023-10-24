@@ -1,0 +1,654 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_Mover" Id="{3ed790a4-6e64-4b54-8db7-341624f96fe6}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XTS_Mover EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Mover, I_XTS_Mover_PLC
+VAR	
+	//Link to NC
+	Axis : FB_XTS_Axis;
+
+	{attribute 'hide'}
+	bInitDone : BOOL;
+	{attribute 'hide'}
+	ipXtsSystem : I_XTS_System_Registration;
+	{attribute 'hide'}
+	ipUtilityMover : I_TcIoXtsXpuMover;
+	{attribute 'hide'}
+	ipProductData : I_XTS_ProductData; //later the required interface of the tool or product can be queried via query interface
+	{attribute 'hide'}
+	ipParentStation : I_XTS_Station; //This is the station in which the Mover is currently standing or moving.	
+	{attribute 'hide'}
+	ipNextMover : I_XTS_Mover;
+	{attribute 'hide'}
+	sTargedStation : STRING;
+	{attribute 'hide'}
+	fLastCmdTargedPosition : LREAL; //the last commanded target position [mm]
+	{attribute 'hide'}
+	fLastCmdTargedVelocity : LREAL; //the last commanded target speed
+	{attribute 'hide'}	
+	fLastCmdTargedGap 	: LREAL; //the last commanded target gap
+	{attribute 'hide'}
+	bInGroup : BOOL;	
+	{attribute 'hide'}	
+	lrTrackLentgh 			: LREAL; //[mm]  Modulo
+	{attribute 'hide'}
+	fbFeedback 					: CHALET_BaseComponents.FB_CH_Feedback;;
+	
+END_VAR
+VAR PERSISTENT
+	fDrivenDistance : LREAL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Command" Id="{ca288374-806c-40ea-bc74-0ab5bbcbeeac}" />
+    <Folder Name="Dynamics" Id="{b9fcfb38-b272-4ca4-b13a-341f5f54d90d}" />
+    <Folder Name="Status" Id="{36fbca5a-40fa-4fee-a207-226360d4b0d4}" />
+    <Property Name="Coupled" Id="{627291ab-402b-4929-a093-0ff8fc3ea751}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Coupled : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{f28a9d3d-b665-4255-8ee8-a1611de68e13}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Coupled := THIS^.Axis.Coupled;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="DefaultAcceleration" Id="{18610012-8a94-4ab6-bb6e-6d4fcc935be7}" FolderPath="Dynamics\">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultAcceleration : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{30c1feb4-1bec-4b32-8312-941a2f3f97e6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[DefaultAcceleration := THIS^.Axis.DefaultAcceleration;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{73641ac0-c47d-4373-aafd-c8aa42e11a4f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Axis.DefaultAcceleration := DefaultAcceleration;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="DefaultDeceleration" Id="{a4e01ee3-7720-44ba-aa6b-afa8d7117cca}" FolderPath="Dynamics\">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultDeceleration : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{ff90a48b-809c-4768-9581-05a95fc76f54}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[DefaultDeceleration := THIS^.Axis.DefaultDeceleration;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{ecb6ccf7-e313-4889-af0f-b2b90db416f6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Axis.DefaultDeceleration := DefaultDeceleration;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="DefaultJerk" Id="{d2dd93df-7379-493e-a0e2-335666e5944c}" FolderPath="Dynamics\">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultJerk : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{9bcab0a6-60f8-42f0-9374-f84d6b198092}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[DefaultJerk := THIS^.Axis.DefaultJerk;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{5eea3280-3211-4781-b593-3f1678c35bbf}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.Axis.DefaultJerk := DefaultJerk;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Disable" Id="{fabc84ce-66bc-42ad-9f05-26b65256e1b0}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Axis.PowerOff();
+
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.LastCommandAccepted := Axis.Feedback.LastCommandAccepted;
+fbFeedback.HR := Axis.Feedback.hr;
+
+
+IF Axis.Feedback.LastCommandAccepted THEN
+	Disable := S_OK;
+ELSE  
+	Disable := E_FAIL;;	
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="DrivenDistance" Id="{b520ba11-eae3-4194-b965-36b18e5c7ced}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY DrivenDistance : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{713472d5-7bea-4713-b937-1508a3c15ef1}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[DrivenDistance := fDrivenDistance;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Enable" Id="{c5208f99-fcd6-4588-ba54-a943e08cbd2d}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Axis.PowerOn();
+
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.LastCommandAccepted := Axis.Feedback.LastCommandAccepted;
+fbFeedback.HR := Axis.Feedback.hr;
+
+
+IF Axis.Feedback.LastCommandAccepted THEN
+	Enable := S_OK;
+ELSE  
+	Enable := E_FAIL;;	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{26d010fc-cadf-4788-a716-5e39c9198509}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
+IF bInitRetains THEN 
+	
+
+	//Regristrate object in System
+	IF ipXtsSystem <> 0 THEN
+		ipXtsSystem.RegisterMover(THIS^);
+		THIS^.ipXtsSystem := ipXtsSystem;
+	END_IF
+
+
+	
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Feedback" Id="{78e76366-75b3-4e4d-b82e-9b66faf8cccb}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : I_CH_Feedback]]></Declaration>
+      <Get Name="Get" Id="{53c4eaab-cafe-47f9-880a-ceebaeabf33e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="getAxisRef" Id="{e9338665-6fdb-4597-a49b-106d166a108b}" FolderPath="Status\">
+      <Declaration><![CDATA[PROPERTY getAxisRef : REFERENCE TO Tc2_MC2.AXIS_REF]]></Declaration>
+      <Get Name="Get" Id="{380384b0-402e-4f2b-b606-a794dede7c6a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[getAxisRef REF= THIS^.Axis.getAxisRef;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="HaltCA" Id="{b3b73891-2843-460d-b720-beb958a16aee}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD HaltCA : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Axis.HaltCA(
+	fDeceleration:= 0, //use default
+	fJerk:= 0, //use default
+	fGap:= fLastCmdTargedGap);
+	
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.LastCommandAccepted := Axis.Feedback.LastCommandAccepted;
+fbFeedback.HR := Axis.Feedback.hr;
+
+
+IF Axis.Feedback.LastCommandAccepted THEN
+	HaltCA := S_OK;
+ELSE  
+	HaltCA := E_FAIL;;	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="IdentInGroup" Id="{16fd8e53-436d-4269-afa6-4835331c3eb4}" FolderPath="Status\">
+      <Declaration><![CDATA[PROPERTY IdentInGroup : IDENT_IN_GROUP_REF]]></Declaration>
+      <Get Name="Get" Id="{66d1a06a-a12e-497f-9136-eb6174f741d0}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IdentInGroup := UDINT_TO_IDENTINGROUP(THIS^.Axis.getAxisRef.NcToPlc.AxisId);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{23d9f9f9-f9dc-4f21-803f-f56ae726981f}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR
+
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[fbFeedback.hr := S_OK;	
+
+IF NOT THIS^.bInitDone THEN
+	fbFeedback.ActiveCommand := 'Init';
+	
+	//Get Tracklength from system
+	THIS^.lrTrackLentgh := THIS^.ipXtsSystem.TrackLength;
+	
+	
+	//Validate Settings
+	IF (lrTrackLentgh <= 0) THEN
+			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);		
+	END_IF
+	
+
+	//If only one mover is in project, then interface stays 0.
+	IF THIS^.ipXtsSystem.Movers.Size > 1 THEN
+		THIS^.ipNextMover := THIS^.ipXtsSystem.getMoverInFront(THIS^);
+		//Validate Settings
+		IF (ipNextMover = 0) THEN
+			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);	
+		END_IF
+	ELSE
+		THIS^.ipNextMover := 0;
+	END_IF
+	
+	// Get XTS Utility mover object
+	IF ipXtsSystem.Environment <> 0 THEN
+		ipUtilityMover := ipXtsSystem.Environment.UtilityEnvirement.GetMoverInterfaceByAxisId(THIS^.getAxisRef.NcToPlc.AxisId);
+		//Validate 
+		IF (ipUtilityMover = 0) THEN
+			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);	
+		END_IF
+	END_IF
+	
+	
+	//InitAxis
+	fbFeedback.hr := GetMostSignificant(fbFeedback.hr, Axis.Initialize());	
+
+	bInitDone := CheckOk(fbFeedback.hr);
+END_IF
+
+Initialize := fbFeedback.hr;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="LagDistance" Id="{fa2169ed-cf4a-4db4-abdd-b47bb25a427a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LagDistance : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{481cd61e-87a5-4a23-802c-06c901cb6898}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LagDistance := THIS^.Axis.LagDistance;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedGap" Id="{c603e157-0a0b-4fe1-aa25-9803f19d5a3b}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+      <Get Name="Get" Id="{86180dea-72a2-44e5-98be-24c2f95a6f1f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedGap := fLastCmdTargedGap;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedPosition" Id="{3958310d-6370-4bc5-9821-b9fcf79326a2}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedPosition : LREAL]]></Declaration>
+      <Get Name="Get" Id="{0cc8ea36-ff74-4575-81b6-5407cf19e616}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedPosition := fLastCmdTargedPosition;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedVelocity" Id="{1b8ff9df-ff49-4e9c-9925-a9f950566659}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedVelocity : LREAL]]></Declaration>
+      <Get Name="Get" Id="{6d914134-e0b8-4a08-ba17-5ff68a157872}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[LastCmdTargedVelocity := fLastCmdTargedVelocity;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="MoveAbsCA" Id="{e608c39d-112a-4026-931d-1e2e9427af10}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD MoveAbsCA : HRESULT
+VAR_INPUT
+	fPosition	: LREAL := MC_INVALID;
+	fVelocity	: LREAL := MC_INVALID;
+	fGap		: LREAL := MC_DEFAULT;
+	eDirection	: Tc3_Mc3Definitions.MC_DIRECTION;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Axis.MoveAbsoluteCA(
+	fPosition:= fPosition, 
+	fVelocity:= fVelocity, 
+	fGap:= fGap, 
+	fAcceleration:= 0, //Use Axis default
+	fDeceleration:= 0, //Use Axis default
+	fJerk:= 0, 			//Use Axis default
+	eDirection := eDirection,
+	eBufferMode:= Tc3_Mc3Definitions.MC_BUFFER_MODE.mcAborting);
+
+THIS^.fLastCmdTargedVelocity := fVelocity;
+THIS^.fLastCmdTargedPosition := fPosition;
+THIS^.fLastCmdTargedGap := fGap;
+
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.LastCommandAccepted := Axis.Feedback.LastCommandAccepted;
+fbFeedback.HR := Axis.Feedback.hr;
+
+
+IF Axis.Feedback.LastCommandAccepted THEN
+	MoveAbsCA := S_OK;
+ELSE  
+	MoveAbsCA := E_FAIL;;	
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="MoverInGroup" Id="{1456bf31-7e86-484b-b915-73afc447ac11}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverInGroup : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{0f057045-f770-4314-b040-34f6e64174be}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[MoverInGroup := bInGroup;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{3c0acef1-3a7f-4a39-8b35-c7b1fc94d122}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[bInGroup := MoverInGroup;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="Moving" Id="{7f684ea5-18fb-4113-9f2e-3e6e6516eb36}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Moving : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{b6a0da70-c417-4d3b-ba79-4206b4ba4722}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Moving := THIS^.Axis.Moving;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="NextMover" Id="{cfe98c85-e400-447d-84c6-6a0d712a3ba3}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY NextMover : I_XTS_Mover
+]]></Declaration>
+      <Get Name="Get" Id="{d18cdb15-51fd-4bb2-8b90-9e642aa239cc}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[NextMover := ipNextMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="OID" Id="{fff58861-514a-439b-92c4-eaf63536f340}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{a17ad2ef-7302-4629-9cd9-0e4f954bfad3}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := THIS^.Axis.OID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ParentStation" Id="{6cca7d79-22b7-4800-bcd7-e5da152983ec}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ParentStation : I_XTS_Station
+]]></Declaration>
+      <Get Name="Get" Id="{dfe80be0-f7f8-476a-b158-3b9e081323d5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ParentStation := ipParentStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{59bbc721-c9b4-4d89-b456-547c6ecc3201}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ipParentStation := ParentStation;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{3c69251b-801e-4c6a-b612-567ec3e5bf9f}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{e39d0e2b-c78c-4fa5-acc7-b84c6e63f69f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Round to 3 digits. If Axis is not enabled, use act position
+IF THIS^.Axis.getAxisRef.Status.Disabled THEN
+	PositionOnTrack := TO_LREAL(TRUNC(THIS^.Axis.ActPosModulo*1000))/1000;
+ELSE
+	PositionOnTrack := TO_LREAL(TRUNC(THIS^.Axis.SetPosModulo*1000))/1000;	
+END_IF
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="ProductData" Id="{389f0e05-56fd-43ad-a266-706c31820384}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PUBLIC ProductData : I_XTS_ProductData]]></Declaration>
+      <Get Name="Get" Id="{019d049e-dcda-4c9d-91ee-9f7c613d9e2f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[ProductData := ipProductData;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{3c645bf0-f6f5-45e0-a21c-f1f84867eff3}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[// No change. Same interface is set again
+IF ipProductData = ProductData THEN
+	;//Noting
+	
+ELSE
+
+	// If allready an interface is linked. Unlink
+	IF ipProductData <> 0 THEN
+		ipProductData.LinkToMover(0);
+		ipProductData := 0;
+	END_IF
+	
+	// Link and store new interface
+	IF ProductData <> 0 THEN
+		ProductData.LinkToMover(THIS^);
+		ipProductData := ProductData;
+	END_IF
+END_IF
+]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Reset" Id="{105a8a39-edcf-452e-8280-230926f87f92}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Axis.Reset();
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.LastCommandAccepted := Axis.Feedback.LastCommandAccepted;
+fbFeedback.HR := Axis.Feedback.hr;
+
+
+IF Axis.Feedback.LastCommandAccepted THEN
+	Reset := S_OK;
+ELSE  
+	Reset := E_FAIL;;	
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="SetAcceleration" Id="{8a067508-9273-45b2-a870-3d2124b777fa}" FolderPath="Dynamics\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY SetAcceleration : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{2198d9cd-6a99-433b-877e-25b3061464bd}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SetAcceleration := THIS^.Axis.SetAcceleration;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="SetVelocity" Id="{61dc005e-7627-4d18-968d-6cc1c0e072c5}" FolderPath="Dynamics\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY SetVelocity : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{bf4b231b-d926-4778-8d14-891d71bd7807}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[SetVelocity := THIS^.Axis.SetVelocity;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TargedStation" Id="{47a0a370-02c4-4535-9177-11a7259d5869}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargedStation : STRING
+]]></Declaration>
+      <Get Name="Get" Id="{a49a56c6-50fe-424b-a33a-79d1d1912a0d}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[TargedStation := sTargedStation;]]></ST>
+        </Implementation>
+      </Get>
+      <Set Name="Set" Id="{19ab049a-80fc-44a6-a298-d92eea4f119a}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[sTargedStation := TargedStation;]]></ST>
+        </Implementation>
+      </Set>
+    </Property>
+    <Method Name="Update" Id="{c49f710e-dc5c-4925-a604-489fc7b469ad}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR
+	fDistanceThisCycle : LREAL;
+END_VAR
+VAR_INST
+	fLastMoverPosition : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Total distance traveled by the mover
+IF Axis.Moving THEN
+	fDistanceThisCycle := ABS(Axis.SetPosModulo-fLastMoverPosition);
+	IF fDistanceThisCycle > (THIS^.lrTrackLentgh*0.5) THEN
+		fDistanceThisCycle := THIS^.lrTrackLentgh-fDistanceThisCycle;
+	END_IF
+	fDrivenDistance := fDrivenDistance + fDistanceThisCycle;
+END_IF
+
+fLastMoverPosition := Axis.SetPosModulo;
+
+Axis.Update();
+
+//Show as feedback the state of the includet axis
+fbFeedback.ActiveCommand := Axis.Feedback.ActiveCommand;
+fbFeedback.HR := Axis.Feedback.hr;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityMover" Id="{98bbafb7-19de-441a-bce6-57eeb214e8c0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityMover : I_TcIoXtsXpuMover]]></Declaration>
+      <Get Name="Get" Id="{d02bd165-9926-40b8-af38-1d5af2ae164e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityMover := ipUtilityMover;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

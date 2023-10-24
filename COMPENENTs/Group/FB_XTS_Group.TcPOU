@@ -1,0 +1,538 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_Group" Id="{4aaf9636-d803-4379-9657-2af0af4e68f3}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XTS_Group EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Group
+VAR
+	{attribute 'hide'}	
+	bInitDone : BOOL;
+	{attribute 'hide'}
+	ipXtsSystem 		: I_XTS_System_Registration;
+	{attribute 'hide'}
+	ipUtilityCAGroup 	: I_Mc2CaGroup;
+	{attribute 'hide'}
+	fbAddAxisToGroup 	: Tc3_McCoordinatedMotion.MC_AddAxisToGroup;
+	{attribute 'hide'}
+	fbRemoveAxisToGroup : Tc3_McCoordinatedMotion.MC_RemoveAxisFromGroup;
+	{attribute 'hide'}
+	fbGroupEnable 		: Tc3_McCoordinatedMotion.MC_GroupEnable;
+	{attribute 'hide'}
+	fbGroupDisable 		: Tc3_McCoordinatedMotion.MC_GroupDisable;
+	{attribute 'hide'}
+	fbGroupReadStatus 	: Tc3_McCoordinatedMotion.MC_GroupReadStatus;	
+	{attribute 'hide'}
+	fbUngroupAllAxes 	: Tc3_McCoordinatedMotion.MC_UngroupAllAxes;	
+	{attribute 'hide'}
+	fbGroupReset	 	: Tc3_McCoordinatedMotion.MC_GroupReset;
+	{attribute 'hide'}
+	nState_SEQ_Adding 	: UDINT;
+	{attribute 'hide'}	
+	fbMovers : CHALET_BaseComponents.FB_CH_List; // List of Axis to be added to the group
+		
+	//Link to CA Group
+	GroupRef : AXES_GROUP_REF;
+	
+	{attribute 'hide'}	
+	ipTempMover : I_XTS_Mover;
+
+	{attribute 'hide'}
+	dummyAxis : AXIS_REF;
+	
+	{attribute 'hide'}	
+	fbFeedback : CHALET_BaseComponents.FB_CH_Feedback;
+	
+	{attribute 'hide'}
+	eActiveCommand : E_NcGroupCommands := E_NcGroupCommands.None;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="AddAxisListToGroup" Id="{d79b8859-f23f-4a90-983f-c1b1a0c91fbc}">
+      <Declaration><![CDATA[METHOD AddAxisListToGroup : HRESULT
+VAR_INPUT
+	ipMovers : CHALET_BaseComponents.I_CH_List;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Done THEN
+	//Errror active/not ready
+	THIS^.fbFeedback.LastCommandAccepted := FALSE;
+	
+ELSIF nState_SEQ_Adding <> 0 AND nState_SEQ_Adding <> 999 THEN
+	// Adding Sequence is not finished. Terminate first
+	THIS^.fbFeedback.LastCommandAccepted := FALSE;
+
+ELSIF ipMovers = 0 THEN
+	// Invalide input
+	THIS^.fbFeedback.LastCommandAccepted := FALSE;
+		
+ELSE
+	// duplicate List
+	THIS^.fbMovers.Duplicate(CopyFrom := ipMovers);
+	
+	
+	THIS^.nState_SEQ_Adding := 1;
+	THIS^.fbFeedback.LastCommandAccepted := TRUE;
+	THIS^.eActiveCommand := E_NcGroupCommands.AddAxisListToGroup;
+	THIS^.fbFeedback.Busy := TRUE;	
+
+END_IF
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	AddAxisListToGroup := S_OK;
+ELSE
+	AddAxisListToGroup := E_FAIL;
+END_IF
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="AddingAxisToGroup" Id="{58d8221c-b2e3-4540-8cdb-c6fc1d55a40a}">
+      <Declaration><![CDATA[METHOD AddingAxisToGroup : HRESULT
+VAR
+	hr : HRESULT;
+END_VAR
+VAR_INST
+	ipMover : CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AddingAxisToGroup := S_PENDING;
+
+CASE nState_SEQ_Adding OF
+	0: // Idle
+		AddingAxisToGroup := S_OK;
+		
+		
+	1: // prepare List for iteratrion 
+		THIS^.fbMovers.ResetIterator();
+		nState_SEQ_Adding := 10;
+		
+		
+	10: // has next Mover?
+		IF THIS^.fbMovers.HasNextObject() THEN
+			ipMover := THIS^.fbMovers.GetNextObject();
+			IF ToMover(ipMover, ipTempMover) THEN
+				nState_SEQ_Adding := 20;
+			END_IF
+		ELSE 
+			nState_SEQ_Adding := 100;			
+		END_IF
+		
+		
+	20: // get Axis Reference
+		IF ipTempMover <> 0 AND_THEN __ISVALIDREF(ipTempMover.getAxisRef) THEN
+			nState_SEQ_Adding := 30;
+		ELSE
+			nState_SEQ_Adding := 1000 + nState_SEQ_Adding;	
+		END_IF
+		
+		
+	30: // add mover to group
+		fbAddAxisToGroup.Execute := TRUE;
+		IF fbAddAxisToGroup.Error THEN
+			nState_SEQ_Adding := 1000 + nState_SEQ_Adding;
+		ELSIF fbAddAxisToGroup.Done THEN
+			nState_SEQ_Adding := 40;
+			ipTempMover.MoverInGroup := TRUE;
+		END_IF
+
+	40: // Remove Object from List
+		IF THIS^.fbMovers.RemoveObject(ipMover) THEN
+			THIS^.fbMovers.ResetIterator();
+			nState_SEQ_Adding := 10;
+		ELSE
+			nState_SEQ_Adding := 1000 + nState_SEQ_Adding;	
+		END_IF
+			
+		
+	100: // clear list
+		// todo THIS^.iMovers.Clear();	
+		nState_SEQ_Adding := 999;
+		
+		
+	999: // Done
+		AddingAxisToGroup := S_OK;
+
+		
+	1000..1999://Error
+		hr := GetMostSignificant(hr, E_FAIL);	
+			
+END_CASE
+
+// Propagate error
+IF FAILED(hr) THEN
+	AddingAxisToGroup := hr;
+END_IF
+
+// set feedback
+THIS^.fbFeedback.HR := hr;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="AllAxesStanding" Id="{257ce20d-48dc-4a65-b74b-e64cfb7ae187}">
+      <Declaration><![CDATA[PROPERTY AllAxesStanding : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{8ac0240a-03af-466f-b510-d7661d7af378}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[AllAxesStanding := fbGroupReadStatus.AllAxesStanding;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="ChangeGapMode" Id="{da0fdd6f-50dc-4f40-b663-fbb7b90d9ab6}">
+      <Declaration><![CDATA[METHOD ChangeGapMode : HRESULT
+VAR_INPUT
+	bFast : BOOL;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ChangeGapMode := S_PENDING;
+
+IF bFast THEN
+	// Change fist to positive direction and then to Fast Mode	
+	ipUtilityCAGroup.SetGapControlDirection(MC_GAP_CONTROL_DIRECTION.mcGapCtrlDirectionPositive);
+	ipUtilityCAGroup.SetDefaultGapControlMode(MC_DEFAULT_GAP_CONTROL_MODE.mcGapCtrlModeFast);
+ELSE
+	// Change first to StandardMode and then to both direction
+	ipUtilityCAGroup.SetDefaultGapControlMode(MC_DEFAULT_GAP_CONTROL_MODE.mcGapCtrlModeStandard);
+	ipUtilityCAGroup.SetGapControlDirection(MC_GAP_CONTROL_DIRECTION.mcGapCtrlDirectionBoth);
+END_IF
+
+ChangeGapMode := S_OK;
+	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Disable" Id="{325c917f-7a71-4e2b-b2b1-ecae5e32192c}">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.fbFeedback.LastCommandAccepted := TRUE;
+THIS^.fbFeedback.Busy := TRUE;	
+THIS^.fbGroupDisable.Execute := TRUE;
+THIS^.eActiveCommand := E_NcGroupCommands.GroupDisable;
+
+
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	Disable := S_OK;
+ELSE
+	Disable := E_FAIL;
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Enable" Id="{9beb4429-dc90-46df-bf16-4b46f66d12dc}">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.fbFeedback.Done THEN
+	THIS^.fbFeedback.LastCommandAccepted := FALSE;
+	// Error active/not ready
+	
+ELSIF NOT(THIS^.fbGroupReadStatus.GroupDisabled) THEN
+	THIS^.fbFeedback.LastCommandAccepted := FALSE;
+	// Group in wrong State
+	
+ELSE
+	THIS^.fbFeedback.LastCommandAccepted := TRUE;
+	THIS^.fbFeedback.Busy := TRUE;
+	THIS^.eActiveCommand := E_NcGroupCommands.GroupEnable;
+	THIS^.fbGroupEnable.Execute := TRUE;
+END_IF
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	Enable := S_OK;
+ELSE
+	Enable := E_FAIL;
+END_IF
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FB_init" Id="{b822a00d-c0fe-469f-b997-a9c93ef89303}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object	
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
+IF bInitRetains THEN 
+	
+	//Regristrate object in System
+	IF ipXtsSystem <> 0 THEN
+		ipXtsSystem.LinkGroup(THIS^);
+		THIS^.ipXtsSystem := ipXtsSystem;
+	END_IF
+
+
+
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="GroupEnabled" Id="{bbe69e5c-66cf-41ad-9c0d-499a5f8e2121}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY GroupEnabled : BOOL]]></Declaration>
+      <Get Name="Get" Id="{a73cbb16-a06d-4e0d-8f4a-a243e622706f}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[GroupEnabled := fbGroupReadStatus.Valid AND NOT (fbGroupReadStatus.GroupDisabled OR fbGroupReadStatus.GroupErrorStop);]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="HR" Id="{ab287015-dc04-4404-8211-f92bd88ecf44}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT
+]]></Declaration>
+      <Get Name="Get" Id="{93c4432a-cf39-4e10-822e-321a9353e92e}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[HR := fbFeedback.hr;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{ba4b61c8-efb7-43cd-a755-5511a1c0b218}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.bInitDone THEN
+
+	Initialize := S_PENDING;
+
+	
+	// Check if link to Group is mapped
+	IF NcParameterlist.ERROR_IF_NC_AXIS_IS_NOT_MAPPED AND_THEN F_GetMappingStatus(ADR(THIS^.GroupRef.NcToPlc), SIZEOF(THIS^.GroupRef.NcToPlc)) <> EPlcMappingStatus.MS_Mapped THEN
+		//ERROR NcToPlc
+		Initialize := E_FAIL;
+		RETURN;
+	END_IF
+	
+	
+	// Check if link to Group is mapped
+	IF NcParameterlist.ERROR_IF_NC_AXIS_IS_NOT_MAPPED AND_THEN F_GetMappingStatus(ADR(THIS^.GroupRef.PlcToNc), SIZEOF(THIS^.GroupRef.PlcToNc)) <> EPlcMappingStatus.MS_Mapped THEN
+		//ERROR PlcToNc
+		Initialize := E_FAIL;		
+		RETURN;
+	END_IF	
+
+
+		
+	IF THIS^.ipXtsSystem.Environment <> 0 THEN
+		ipUtilityCAGroup := THIS^.ipXtsSystem.Environment.UtilityEnvirement.Mc2CaGroup(1);
+	END_IF
+
+	THIS^.bInitDone := TRUE;
+ELSE
+	
+	Initialize := S_OK;
+
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="OID" Id="{3699cc38-0bf3-41cc-a243-eea585becb0b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY OID : OTCID]]></Declaration>
+      <Get Name="Get" Id="{14665e01-eca9-45bb-930b-a0df927cc3fa}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[OID := GroupRef.NcToPlc.Common.GroupOID;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="RemoveAxisFromGroup" Id="{84c91b6e-6d1d-460b-accf-d5a5163446d3}">
+      <Declaration><![CDATA[METHOD RemoveAxisFromGroup : HRESULT
+VAR_INPUT
+	ipMover	: I_XTS_Mover;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipMover = 0 THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error no valid input
+	
+ELSE
+	THIS^.eActiveCommand := E_NcGroupCommands.RemoveAxisFromGroup;
+	THIS^.fbFeedback.LastCommandAccepted := TRUE;
+	THIS^.fbFeedback.Busy := TRUE;
+
+	fbRemoveAxisToGroup.IdentInGroup := ipMover.IdentInGroup;
+	fbRemoveAxisToGroup.Execute := TRUE;
+	ipMover.MoverInGroup := FALSE;
+END_IF
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	RemoveAxisFromGroup := S_OK;
+ELSE
+	RemoveAxisFromGroup := E_FAIL;
+END_IF
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Reset" Id="{3364a014-48de-4ade-bd16-86b7f043d881}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand := E_NcGroupCommands.GroupReset;
+THIS^.fbFeedback.LastCommandAccepted := TRUE;
+THIS^.fbFeedback.Busy := TRUE;	
+
+THIS^.fbGroupReset.Execute := TRUE;
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	Reset := S_OK;
+ELSE
+	Reset := E_FAIL;
+END_IF
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UngroupAllAxes" Id="{75cc5e8b-ddd5-42eb-8da7-1cadab1f38ae}">
+      <Declaration><![CDATA[METHOD UngroupAllAxes : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[THIS^.eActiveCommand := E_NcGroupCommands.UngroupAllAxes;
+THIS^.fbFeedback.LastCommandAccepted := TRUE;
+THIS^.fbFeedback.Busy := TRUE;	
+
+THIS^.nState_SEQ_Adding := 0;
+
+THIS^.fbUngroupAllAxes.Execute := TRUE;
+
+
+IF THIS^.fbFeedback.LastCommandAccepted THEN
+	UngroupAllAxes := S_OK;
+ELSE
+	UngroupAllAxes := E_FAIL;
+END_IF
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{507d010b-c17d-4e55-bb65-b04fe565b2ca}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// ********************** Refresh Group Information ***********************************************
+fbGroupReadStatus(AxesGroup:=  THIS^.GroupRef, Enable:= TRUE);
+
+// ********************** Set feedback depending on active command *******************************
+IF THIS^.eActiveCommand <> E_NcGroupCommands.None THEN
+	fbFeedback.ActiveCommand 	:= TO_STRING(THIS^.eActiveCommand);	
+END_IF
+
+CASE THIS^.eActiveCommand OF 
+  E_NcGroupCommands.GroupDisable:
+		fbFeedback.Busy 		:= fbGroupDisable.Busy;
+		fbFeedback.Done 		:= fbGroupDisable.Done;
+		fbFeedback.ErrorId 		:= fbGroupDisable.ErrorId;
+  
+  E_NcGroupCommands.GroupEnable:
+		fbFeedback.Busy 		:= fbGroupEnable.Busy;
+		fbFeedback.Done 		:= fbGroupEnable.Done;
+		fbFeedback.ErrorId 		:= fbGroupEnable.ErrorId;
+  
+  E_NcGroupCommands.GroupReset:
+		fbFeedback.Busy 		:= fbGroupReset.Busy;
+		fbFeedback.Done 		:= fbGroupReset.Done;
+		fbFeedback.ErrorId 		:= fbGroupReset.ErrorId;  
+  
+  E_NcGroupCommands.AddAxisListToGroup: 
+		fbFeedback.Busy 		:= nState_SEQ_Adding > 0 AND nState_SEQ_Adding < 999;
+		fbFeedback.Done 		:= nState_SEQ_Adding = 999; 
+//		fbFeedback.ErrorId 		:= ;
+  
+  E_NcGroupCommands.RemoveAxisFromGroup:
+		fbFeedback.Busy 		:= fbRemoveAxisToGroup.Busy;
+		fbFeedback.Done 		:= fbRemoveAxisToGroup.Done;
+		fbFeedback.ErrorId 		:= fbRemoveAxisToGroup.ErrorId;
+  
+  E_NcGroupCommands.UngroupAllAxes:
+		fbFeedback.Busy 		:= fbUngroupAllAxes.Busy;
+		fbFeedback.Done 		:= fbUngroupAllAxes.Done;
+		fbFeedback.ErrorId 		:= fbUngroupAllAxes.ErrorId;
+  
+END_CASE
+
+// **********************  Stop to execute commands on .done or .error ***************************
+IF THIS^.fbFeedback.Done OR THIS^.fbFeedback.Error THEN
+	THIS^.eActiveCommand 				:= E_NcGroupCommands.None;
+END_IF
+
+
+// **********************  Cyclic calls  *********************************************************
+IF THIS^.ipTempMover <> 0 THEN
+	fbAddAxisToGroup(AxesGroup := THIS^.GroupRef, Axis := THIS^.ipTempMover.getAxisRef, IdentInGroup := ipTempMover.IdentInGroup);
+ELSE
+	fbAddAxisToGroup(AxesGroup := THIS^.GroupRef, Axis := dummyAxis);
+END_IF
+
+fbRemoveAxisToGroup(AxesGroup := THIS^.GroupRef);
+fbGroupEnable(AxesGroup := THIS^.GroupRef);
+fbGroupDisable(AxesGroup := THIS^.GroupRef);
+fbUngroupAllAxes(AxesGroup := THIS^.GroupRef);
+fbGroupReset(AxesGroup := THIS^.GroupRef);
+
+// ********************** Reset all Execution flags **********************************************
+fbAddAxisToGroup.Execute := FALSE;
+fbRemoveAxisToGroup.Execute := FALSE;
+fbGroupEnable.Execute := FALSE;
+fbGroupDisable.Execute := FALSE;
+fbUngroupAllAxes.Execute := FALSE;
+fbGroupReset.Execute := FALSE;
+
+
+// todo hresult]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityCAGroup" Id="{8d65c885-7d48-4311-83a9-227014c276bf}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityCAGroup : I_Mc2CaGroup]]></Declaration>
+      <Get Name="Get" Id="{f673bf08-6483-4069-85b3-882fd1aa7efb}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[UtilityCAGroup := THIS^.ipUtilityCAGroup;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

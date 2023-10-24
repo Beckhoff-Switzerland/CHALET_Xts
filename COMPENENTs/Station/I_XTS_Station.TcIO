@@ -1,0 +1,147 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Station" Id="{93173e7e-5f1f-41b7-9cae-ddf1ef2d2fc7}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Station  EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Method Name="AddMoverToQueue" Id="{dcf69248-1849-4ab5-a6f1-55dec9788659}">
+      <Declaration><![CDATA[METHOD AddMoverToQueue : HRESULT
+VAR_INPUT
+	ipMover : I_XTS_Mover;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="AreMoversInPlace" Id="{6c2732a7-171c-473e-9dce-c93b33167f6b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY AreMoversInPlace : BOOL]]></Declaration>
+      <Get Name="Get" Id="{37404813-753d-4c2e-a168-46ee3e8d956c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CtsEmptySpaceInQueue" Id="{80790399-3f9b-44a8-a885-28b318172fd5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsEmptySpaceInQueue : UDINT]]></Declaration>
+      <Get Name="Get" Id="{500818d1-9da7-4f36-b8c4-0e920895a712}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="CtsMoversInQueue" Id="{a57bef8b-97f7-4467-a0b2-f4bc8c7a4402}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversInQueue : UDINT]]></Declaration>
+      <Get Name="Get" Id="{0accd52b-0b99-412b-8aee-2ae586f624e7}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="DeleteMoversQueue" Id="{fb8db26b-4ead-4719-9871-bcdd0b308cc0}">
+      <Declaration><![CDATA[METHOD DeleteMoversQueue : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="HR" Id="{50cb5acf-1f27-4e58-a36a-fc1ef0412020}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{41afba73-6745-4f8e-8c07-ebb6ee366ce5}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LUID" Id="{80fdfa3d-95e5-40af-8b8a-1b721c812ed5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING]]></Declaration>
+      <Get Name="Get" Id="{960fc52e-c825-46d7-9f7f-0336d3dd7aaa}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverGapAtExit" Id="{5cec660b-2c1a-4fe0-a842-d599f159e3f3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverGapAtExit : LREAL]]></Declaration>
+      <Get Name="Get" Id="{6e024805-9a5a-4187-af3a-31675f1cfed6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{9225ed17-d2a6-41ac-a388-48da6877d1a0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverQueueSize" Id="{d07e5abb-653c-4489-a199-5c48ad380e2d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverQueueSize : UINT]]></Declaration>
+      <Get Name="Get" Id="{c7ac416b-4571-4290-84b8-b24fb62928bb}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{ae6153c6-30f1-43d2-8eeb-56ab8c5b1c35}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoversInQueue" Id="{72fa1f99-2d88-4fc8-a44a-15ceaadbab8d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF I_XTS_Mover_PLC // Return a sorted list of movers in this zone. Index 0 is the mover in Front.]]></Declaration>
+      <Get Name="Get" Id="{46d8e947-1385-4541-8d64-3eb9f848c3ad}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverVelocityAtExit" Id="{7c8fef6f-8178-46e1-a440-896b17c90f80}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverVelocityAtExit : LREAL]]></Declaration>
+      <Get Name="Get" Id="{84e145b2-a750-4419-a9f7-02fc13104142}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{0710baff-db39-417b-8e73-521eed5928a6}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{7d2c12fd-5cf9-479d-8ca9-098e54ea4d0a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{56524df3-6b32-453e-ac1d-5e37753457a8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ReadyToRecvMovers" Id="{caa39dfc-e0be-4923-986b-1578eaeb490b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY ReadyToRecvMovers : BOOL]]></Declaration>
+      <Get Name="Get" Id="{0f055eb7-1aae-4886-8313-b660b15254bf}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{a74586e8-2c40-4339-9547-908e8aa7bc71}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Method Name="SendMoversToStation" Id="{beedf22c-a16b-4887-8f1e-7ebc05099ac2}">
+      <Declaration><![CDATA[METHOD SendMoversToStation : HRESULT
+VAR_INPUT
+	sTargedStation : STRING;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="StationGroupID" Id="{c301c423-1987-498f-aba9-5c4eeb18167d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationGroupID : String]]></Declaration>
+      <Get Name="Get" Id="{73cc5267-23a9-44b1-a793-bd80e00689da}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StationInFront" Id="{e35d3ecc-e3ff-4c39-a35b-bf61781b13ea}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StationInFront : I_XTS_Station]]></Declaration>
+      <Get Name="Get" Id="{4442a0a4-c536-4116-bceb-a54a7d579086}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

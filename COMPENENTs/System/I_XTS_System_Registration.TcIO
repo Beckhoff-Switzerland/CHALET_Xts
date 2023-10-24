@@ -1,0 +1,127 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_System_Registration" Id="{e23224ec-a5e5-4ca8-8c9f-e060323ea6de}">
+    <Declaration><![CDATA[INTERFACE I_XTS_System_Registration
+]]></Declaration>
+    <Property Name="Disabled" Id="{f3e93dee-9397-4ebf-99bc-4a96c6fb5eab}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Disabled : Bool]]></Declaration>
+      <Get Name="Get" Id="{b81f1c4f-3ad7-4284-b19b-196078176cbc}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Enabled" Id="{990bdc63-05e2-443b-99f0-4238ebfb7bc5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Enabled : Bool]]></Declaration>
+      <Get Name="Get" Id="{2e9c2891-8b23-4c50-83da-b999e9b14a5c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Environment" Id="{af2650b6-8d45-4c13-bec2-5b93162a3549}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Environment : I_XTS_Environment]]></Declaration>
+      <Get Name="Get" Id="{b28bc67c-c439-4e9d-90eb-ee398abcd59e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="getMoverInFront" Id="{4c3fee03-4e89-4f7f-b948-0536ada6bf7e}">
+      <Declaration><![CDATA[METHOD getMoverInFront : I_Xts_Mover
+VAR_INPUT
+	ipMover : I_Xts_Mover;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="getStationInFront" Id="{7af71673-902d-4864-a1e8-45ff0a26618c}">
+      <Declaration><![CDATA[METHOD getStationInFront : I_XTS_Station
+VAR_INPUT
+	ipStation : I_XTS_Station;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Initialized" Id="{93d50cf1-3256-432d-af83-a73fa78c626d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Initialized : BOOL]]></Declaration>
+      <Get Name="Get" Id="{8218290d-bbad-4486-9335-afe87f75127a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="LinkEnvironment" Id="{9480d503-c5b4-46d9-90e1-650e447f5758}">
+      <Declaration><![CDATA[METHOD LinkEnvironment : HRESULT
+VAR_INPUT
+	ipEnvironment : CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="LinkGroup" Id="{85442a91-411f-4479-9a37-3aef3fd5e5a2}">
+      <Declaration><![CDATA[METHOD LinkGroup : HRESULT
+VAR_INPUT
+	ipGroup : CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Movers" Id="{5800372a-a6f3-4b8b-b067-152301fea1a3}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Movers : CHALET_BaseComponents.I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{a4e16d2a-6345-4372-b5d9-ceb115f90617}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="RegisterMover" Id="{de9a75e6-102d-4d91-a6d0-9eb8b32525a1}">
+      <Declaration><![CDATA[METHOD RegisterMover : HRESULT
+VAR_INPUT
+	ipMover : CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterStation" Id="{692c7154-cce4-4f63-8d0e-9f478ae22482}">
+      <Declaration><![CDATA[METHOD RegisterStation : HRESULT
+VAR_INPUT
+	ipStation : CHALET_BaseComponents.I_CH_Object;
+END_VAR]]></Declaration>
+    </Method>
+    <Method Name="RegisterTrigger" Id="{ddbdd1ff-83f9-4e87-8045-da9bba0d5ba1}">
+      <Declaration><![CDATA[METHOD RegisterTrigger : HRESULT
+VAR_INPUT
+	ipTrigger	: CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RegisterZone" Id="{13383196-e380-4794-9c7a-4a637a792e03}">
+      <Declaration><![CDATA[METHOD RegisterZone : HRESULT
+VAR_INPUT
+	ipZone	: CHALET_BaseComponents.I_CH_Object;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Stations" Id="{334b57b5-c077-457e-b4aa-5d6ed926b73c}">
+      <Declaration><![CDATA[PROPERTY Stations : I_CH_LIST]]></Declaration>
+      <Get Name="Get" Id="{ab0eec75-d866-4dd2-9ffc-9c0e714d8f84}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TrackLength" Id="{f0c97b7f-1c7d-4e7f-9f48-2861431a2c0e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackLength : LREAL]]></Declaration>
+      <Get Name="Get" Id="{c3d42ded-526e-43ec-8b42-f8aa36a20e46}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="ToTrigger" Id="{24c06874-f91b-4a65-84e0-1578471928c8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ToTrigger : BOOL
+VAR_INPUT
+	ipChObject : I_CH_OBJECT;
+	ipXtsTrigger : REFERENCE TO I_XTS_Trigger;
+END_VAR
+
+VAR
+	ipTmp : I_XTS_Trigger;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* 
+   1. Test if the interface exists
+   2. Test if the object implements a "Object" interface 
+   3. Write reference to interface in parameter
+   4. Returne TRUE if succesfull
+*)
+IF ipChObject <> 0 AND_THEN __QUERYINTERFACE(ipChObject,ipTmp) THEN
+	ipXtsTrigger := ipTmp;
+	ToTrigger := TRUE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

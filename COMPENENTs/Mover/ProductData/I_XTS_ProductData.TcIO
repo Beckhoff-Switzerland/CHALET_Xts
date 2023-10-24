@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_ProductData" Id="{d2dedf9b-5d75-495d-9407-7c5173160f04}">
+    <Declaration><![CDATA[INTERFACE I_XTS_ProductData EXTENDS __SYSTEM.IQueryInterface 
+]]></Declaration>
+    <Property Name="LinkedMover" Id="{25d76f2e-96b6-4bf9-8ee6-135827213b38}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LinkedMover : I_XTS_Mover_PLC]]></Declaration>
+      <Get Name="Get" Id="{8b451f72-0061-4779-8e9a-00bd9645ae67}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="LinkToMover" Id="{86faefad-dc04-4d9e-bb69-5d0d7cdca902}">
+      <Declaration><![CDATA[METHOD LinkToMover : BOOL //it is not necessary to call this method. This is already done internally
+VAR_INPUT
+	ipMoverPlc : I_XTS_Mover_PLC;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

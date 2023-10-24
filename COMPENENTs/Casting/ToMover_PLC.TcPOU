@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="ToMover_PLC" Id="{8056fd33-4fa3-4dc1-a997-31aec024890e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ToMover_PLC : BOOL
+VAR_INPUT
+	ipChObject : I_CH_OBJECT;
+	ipXtsMover : REFERENCE TO I_XTS_Mover_PLC;
+END_VAR
+
+VAR
+	ipTmp : I_XTS_Mover_PLC;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* 
+   1. Test if the interface exists
+   2. Test if the object implements a "Object" interface 
+   3. Write reference to interface in parameter
+   4. Returne TRUE if succesfull
+*)
+IF ipChObject <> 0 AND_THEN __QUERYINTERFACE(ipChObject,ipTmp) THEN
+	ipXtsMover := ipTmp;
+	ToMover_PLC := TRUE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

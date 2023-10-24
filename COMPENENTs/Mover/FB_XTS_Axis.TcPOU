@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_Axis" Id="{c9be247b-dca5-42bd-9f26-7365b340e63a}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XTS_Axis EXTENDS CHALET_NC.FB_NcAxis
+VAR
+	{attribute 'hide'}
+	fbMoveAbsoluteCA		: ARRAY [0..1] OF MC_MoveAbsoluteCA;//A second function block is always required to use the BufferMode. It is not possible to trigger a move function block with new parameters while it is active.
+	{attribute 'hide'}
+	fbHaltCA				: MC_HaltCA;
+	{attribute 'hide'}
+	nActiveMoveAbsCa 		: UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Folder Name="Command" Id="{8433f884-ead4-4088-a232-27ce2473cbb9}" />
+    <Method Name="HaltCA" Id="{2479653f-e98f-41d8-b77d-ade850e233ec}" FolderPath="Command\">
+      <Declaration><![CDATA[METHOD HaltCA : I_CH_Feedback
+VAR_INPUT
+	fDeceleration          : LREAL;
+    fJerk                  : LREAL;
+    fGap                   : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.Error THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error active/not ready
+		
+ELSE
+	THIS^.eActiveCommand 					:= CHALET_Nc.E_NcAxisCommands.HaltCA;
+	THIS^.fbFeedback.LastCommandAccepted	:= TRUE;		
+	THIS^.fbFeedback.Busy 					:= TRUE;
+	                                    	
+	THIS^.fbHaltCA.Execute					:= TRUE;
+	THIS^.fbHaltCA.Gap						:= fGap;
+	
+	
+	//Deceleration
+	//If input = 0  then use default dynamics
+	IF fDeceleration = 0.0 THEN
+		THIS^.fbHaltCA.Deceleration := THIS^.fDefaultDeceleration;
+	ELSE
+		THIS^.fbHaltCA.Deceleration := fDeceleration;
+	END_IF
+	
+	//Jerk
+	//If input = 0  then use default dynamics
+	IF fJerk = 0.0 THEN
+		THIS^.fbHaltCA.Jerk := THIS^.fDefaultJerk;
+	ELSE
+		THIS^.fbHaltCA.Jerk := fJerk;
+	END_IF
+
+END_IF
+
+
+HaltCA := THIS^.fbFeedback;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="MoveAbsoluteCA" Id="{0da6ed3f-85fd-4f58-b7a9-a908d1d34371}" FolderPath="Command\">
+      <Declaration><![CDATA[{attribute 'TcRpcEnable':='1'} //call methode via OPC-UA conection
+METHOD MoveAbsoluteCA  : I_CH_Feedback
+VAR_INPUT
+	fPosition		: LREAL;
+	
+	(* This value determines the minimum gap to the predecessor for Collision Avoidance. *)
+	fGap			: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fVelocity		: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fAcceleration	: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fDeceleration	: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fJerk			: LREAL;
+	
+	(* Defines the direction of the movement (e.g. for a modulo axis). 
+		input=0 = mcDirectionNonModulo*)
+	eDirection	: Tc3_Mc3Definitions.MC_DIRECTION;
+	
+	(* Use the Aborting mode without buffering if input=0. 
+	BufferModes:
+		-MC_Aborting: Default mode without buffering. The command is executed immediately and interrupts any other command that may be running.
+		-MC_Buffered: The command is executed once no other command is running on the axis. The previous movement continues until it has stopped. The following command is started from standstill. *)
+	eBufferMode   : Tc3_Mc3Definitions.MC_BUFFER_MODE;
+END_VAR
+VAR
+	nInactiveInstance : UINT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF THIS^.Error THEN
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Error active/not ready
+
+ELSIF NOT THIS^.BufferEmpty THEN		
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Buffer not ready to store next motion command	
+	
+ELSIF NOT((eBufferMode <> Tc3_Mc3Definitions.MC_BUFFER_MODE.mcAborting) OR (eBufferMode <> Tc3_Mc3Definitions.MC_BUFFER_MODE.mcBuffered)) THEN		
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//only mcAborting and mcBuffered are available 	
+	
+ELSIF NOT(THIS^.Axis.Status.StandStill OR THIS^.Axis.Status.DiscreteMotion OR THIS^.Axis.Status.ContinuousMotion OR THIS^.Axis.Status.SynchronizedMotion) THEN		
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Axis in wrong State
+	
+ELSIF (eBufferMode <> Tc3_Mc3Definitions.MC_BUFFER_MODE.mcAborting) AND bNewBufferCommadThisCycle THEN		
+	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
+	//Buffer not ready to store next motion command		
+	//Max send one buffered motion command each cycle	
+	
+ELSE
+	//A second function block is always required to use the BufferMode. It is not possible to trigger a move function block with new parameters while it is active.
+	IF THIS^.fbMoveAbsoluteCA[nActiveMoveAbsCA].Busy THEN
+		nInactiveInstance := (THIS^.nActiveMoveAbsCa + 1)MOD 2;
+	ELSE
+		nInactiveInstance := THIS^.nActiveMoveAbsCa;
+	END_IF
+	
+	THIS^.eActiveCommand 				:= E_NcAxisCommands.MoveAbsoluteCA;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+	THIS^.fbFeedback.Busy 				:= TRUE;
+	
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].ContinuousUpdate := TRUE;
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].Execute		:= TRUE;
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].Gap			:= fGap;
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].Position		:= fPosition;
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].Direction		:= eDirection;
+	THIS^.fbMoveAbsoluteCA[nInactiveInstance].BufferMode 	:= eBufferMode;
+	
+	//If the currend command is a buffered movement, then set a flag.
+	IF eBufferMode <> Tc3_Mc3Definitions.MC_BUFFER_MODE.mcAborting THEN
+		THIS^.bNewBufferCommadThisCycle := TRUE;
+	END_IF
+	
+	//Velocity
+	//If input = 0  then use default dynamics
+	IF fVelocity = 0.0 THEN
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Velocity := THIS^.fDefaultVelocity;
+	ELSE
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Velocity := fVelocity;
+	END_IF
+	
+	//Acceleration
+	//If input = 0  then use default dynamics
+	IF fAcceleration = 0.0 THEN
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Acceleration := THIS^.fDefaultAcceleration;
+	ELSE
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Acceleration := fAcceleration;
+	END_IF
+	
+	//Deceleration
+	//If input = 0  then use default dynamics
+	IF fDeceleration = 0.0 THEN
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Deceleration := THIS^.fDefaultDeceleration;
+	ELSE
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Deceleration := fDeceleration;
+	END_IF
+	
+	//Jerk
+	//If input = 0  then use default dynamics
+	IF fJerk = 0.0 THEN
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Jerk := THIS^.fDefaultJerk;
+	ELSE
+		THIS^.fbMoveAbsoluteCA[nInactiveInstance].Jerk := fJerk;
+	END_IF
+
+END_IF
+
+
+MoveAbsoluteCA := THIS^.fbFeedback;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Update" Id="{6a2d1eb1-ba53-44f5-9bdd-da27ea44f5eb}">
+      <Declaration><![CDATA[METHOD Update  : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// ********************** Do initialisation first ***********************************************
+IF NOT bInitDone THEN
+	Update := THIS^.Initialize();
+	RETURN;
+END_IF
+
+// ********************** Set feedback depending on active command *******************************
+CASE THIS^.eActiveCommand OF                                                                      
+	E_NcAxisCommands.MoveAbsoluteCA:                                                              
+		fbFeedback.Busy 		:= fbMoveAbsoluteCA[nActiveMoveAbsCa].Busy;                       
+		fbFeedback.Done 		:= fbMoveAbsoluteCA[nActiveMoveAbsCa].Done;                       
+		fbFeedback.ErrorId 		:= fbMoveAbsoluteCA[nActiveMoveAbsCa].ErrorID;  
+       
+	E_NcAxisCommands.HaltCA:                                                              
+		fbFeedback.Busy 		:= fbHaltCA.Busy;                       
+		fbFeedback.Done 		:= fbHaltCA.Done OR fbHaltCA.CommandAborted;                       
+		fbFeedback.ErrorId 		:= fbHaltCA.ErrorID;            
+END_CASE                                                                                          
+
+// **********************  Cyclic call super Update  *********************************************
+SUPER^.Update();
+                                                                                                  
+                                                                                                  
+// **********************  Cyclic calls  *********************************************************
+fbMoveAbsoluteCA[0](Axis := THIS^.Axis);                                                          
+fbMoveAbsoluteCA[1](Axis := THIS^.Axis);                                                          
+fbHaltCA(Axis := THIS^.Axis);
+                                                                                                
+                                                                                                  
+// ********************** Reset all Execution flags **********************************************
+fbMoveAbsoluteCA[0].Execute := FALSE;                                                             
+fbMoveAbsoluteCA[1].Execute := FALSE;
+fbHaltCA.Execute := FALSE;                                                                                                  
+
+                                                                                                 
+// ****************Get the acive instance. Stay at the last active.*******************************
+IF fbMoveAbsoluteCA[0].Active THEN                                                                
+	nActiveMoveAbsCa := 0;
+ELSIF fbMoveAbsoluteCA[1].Active THEN
+	nActiveMoveAbsCa := 1;
+END_IF
+
+//Return
+Update := THIS^.fbFeedback.HR;
+
+]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

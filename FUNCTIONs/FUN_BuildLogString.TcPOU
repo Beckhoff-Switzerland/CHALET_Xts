@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FUN_BuildLogString" Id="{672fc2ac-58d1-4618-9b9b-db68825d7425}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FUN_BuildLogString : String
+VAR_INPUT
+	fPos : LREAL;
+	fVelocity : LREAL;
+	fGap : LREAL;
+END_VAR
+VAR
+	sTemp: STRING;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[sTemp := 				CONCAT('Pos:' , LREAL_TO_STRING(fPos));
+sTemp := CONCAT(sTemp, 	CONCAT(', Velocity:' , LREAL_TO_STRING(fVelocity)));
+sTemp := CONCAT(sTemp, 	CONCAT(', Gap:' , LREAL_TO_STRING(fGap)));
+
+FUN_BuildLogString := sTemp;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Environment" Id="{0f1fffd3-3f82-4722-afce-252d61062d2b}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Environment  EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Property Name="HR" Id="{bb8ae542-0b52-4660-9af1-4083d39a377b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{32805057-8cbd-4c9e-b572-f4eba581e7aa}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{385eb571-6f87-4841-b5b8-894559f7775e}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+    </Method>
+    <Property Name="TrackIsRing" Id="{4380e6d3-bcc4-4052-8fa7-b9b119deb435}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackIsRing : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{eb78a3c6-cb92-4348-8347-9453f5ca9d4d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TrackLength" Id="{db161dbe-a890-4d15-bf3c-281fdf1b0785}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackLength : LREAL]]></Declaration>
+      <Get Name="Get" Id="{f606f0c2-4f64-4599-a50b-90e02365bb95}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{589f0e87-d0d0-4507-b1b4-133f8eede137}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="UtilityEnvirement" Id="{02ce8ee7-e514-4db7-80ce-ba208a82fe2a}">
+      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XTS_Utility.i_TcIoXtsEnvironment]]></Declaration>
+      <Get Name="Get" Id="{35794d32-aa7f-45ac-977f-73b302fb109e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Mover_PLC" Id="{e47f7de2-f04a-480e-a2ce-8f8f5f0b1a53}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Mover_PLC EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Property Name="DefaultAcceleration" Id="{536791b8-3d03-4e24-a9a7-7540cfae8367}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultAcceleration : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{1442cbe0-f6bc-4f20-91ce-d856c4f7ed62}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{ef6db4b8-abe4-4d48-bfb6-b7de2fad2f79}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="DefaultDeceleration" Id="{9b0d8ce8-a83e-4e2f-a34b-1e46d9561ed8}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultDeceleration : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{8890d087-383c-4b19-9bbf-da61ee0cf101}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{4f84c216-f65c-4b2f-b78a-816f68ad9c4a}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="DefaultJerk" Id="{43968ade-22e7-424f-9fef-d8b8eb4e399e}">
+      <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
+{attribute 'monitoring':='call'}
+PROPERTY DefaultJerk : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{7ce9d8a0-38c3-40cc-a375-2892d3f2be8f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{c4d83fa1-caec-47ba-b7ad-4f2729ed75a1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="DrivenDistance" Id="{3cdb7f76-6530-45de-884c-f86f69110c1b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY DrivenDistance : LREAL]]></Declaration>
+      <Get Name="Get" Id="{26d92d4a-b4ba-40ce-a7ed-41fcb1369698}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LagDistance" Id="{b10a5231-09c5-4e83-9ade-98b2be0f8351}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LagDistance : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{71ef1ad3-0d38-4696-83d1-cf2613b1224d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LastCmdTargedGap" Id="{dbe258f2-3771-42b6-8ba5-29aba506a40b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
+      <Get Name="Get" Id="{18c52b15-646e-4d6f-bf50-b3c739ba8cef}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{e2f77ef3-bbcd-4011-b83c-ce731f495df1}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{02b3a8c5-8936-48b3-8f46-8c4dcacfd3ad}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ProductData" Id="{e1cb3e8f-1891-4b79-a583-c3f52b72eb8f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PUBLIC ProductData : I_XTS_ProductData]]></Declaration>
+      <Get Name="Get" Id="{27257a62-8003-4c32-afd4-d3be10359131}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{7ca6fde4-535c-479b-a95f-1cd153754543}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="SetVelocity" Id="{0fcebf09-5353-4bc6-94db-874fad70e86e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY SetVelocity : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{9177b27b-2395-4ac2-a6a7-4a9fbfe3a148}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TargedStation" Id="{6ef8f05b-c662-4f85-a1cd-beee94d5369e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TargedStation : STRING]]></Declaration>
+      <Get Name="Get" Id="{e69626a6-6b37-462f-9cdf-9ac5c6feeafb}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="UtilityMover" Id="{e026d070-4648-48b6-a50c-d473e07f53a4}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityMover : I_TcIoXtsXpuMover]]></Declaration>
+      <Get Name="Get" Id="{67092823-6484-4ad2-9e91-d73dc2770cbf}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+  </Itf>
+</TcPlcObject>

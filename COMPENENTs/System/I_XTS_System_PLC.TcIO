@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_System_PLC" Id="{c2d7fecd-f43b-4292-9dd8-14c2a0244331}">
+    <Declaration><![CDATA[INTERFACE I_XTS_System_PLC
+]]></Declaration>
+    <Method Name="Disable" Id="{1f8631e7-ee4f-4b12-920e-3d4694733782}">
+      <Declaration><![CDATA[METHOD Disable : I_CH_Feedback
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Disabled" Id="{a6d628a4-e6b6-44fe-9d10-be9d83438bd7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Disabled : Bool]]></Declaration>
+      <Get Name="Get" Id="{f8a7bea2-817c-4e43-8bbc-05db7f31b282}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Enable" Id="{5477ac7d-d6ad-4aef-964f-45fcef95bf6f}">
+      <Declaration><![CDATA[METHOD Enable : I_CH_Feedback
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Enabled" Id="{5904da39-f762-4557-b129-7f0948aee238}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Enabled : Bool]]></Declaration>
+      <Get Name="Get" Id="{18cbe12d-2428-4c39-912c-da829aaea0ee}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="Feedback" Id="{3642204a-8f39-4313-83b9-802a3ac98d57}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Feedback : CHALET_BaseComponents.I_CH_Feedback]]></Declaration>
+      <Get Name="Get" Id="{1543f155-613c-4104-9e26-9fcf595d06df}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{d18ff472-139e-4e06-bb4e-0f2ab8795485}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="Initialized" Id="{c9088c92-0b2c-4488-9b13-14b5d4925b4a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Initialized : BOOL]]></Declaration>
+      <Get Name="Get" Id="{fdc2914f-afdc-41b3-b7dd-f9b99a9eb222}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Reset" Id="{73872149-0d91-48d8-aca9-3e79c736ee0e}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Station" Id="{eb96a771-2c97-4618-943b-9831c54e9455}">
+      <Declaration><![CDATA[METHOD Station : I_XTS_Station_PLC
+VAR_INPUT
+	sLUID : STRING;
+END_VAR]]></Declaration>
+    </Method>
+    <Property Name="SuppressAllDynamicsChanges" Id="{daf5f3c8-6b9f-48f7-95ef-28f8dcfd2332}">
+      <Declaration><![CDATA[PROPERTY SuppressAllDynamicsChanges : BOOL]]></Declaration>
+      <Set Name="Set" Id="{aa1b4868-c26a-4ce7-80e7-732f3765491d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TrackLength" Id="{def630f5-4a07-4546-a4f6-e03f709859a2}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackLength : LREAL]]></Declaration>
+      <Get Name="Get" Id="{447bd2c1-6a53-4828-bb5f-8133f4df3222}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{b4ee7fda-6b2d-467c-842f-5552d77074cf}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

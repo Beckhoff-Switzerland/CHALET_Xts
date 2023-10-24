@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_NcGroupCommands" Id="{996161f9-19ac-4cf4-8411-554e47511c6e}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_NcGroupCommands :
+(
+	None:=0,
+	GroupDisable:=150,
+	GroupEnable,
+	GroupReset,
+	AddAxisListToGroup,
+	RemoveAxisFromGroup,
+	UngroupAllAxes
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Trigger" Id="{397858f5-d03c-4a61-80a2-99e2e9a15f03}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Trigger  EXTENDS __SYSTEM.IQueryInterface
+]]></Declaration>
+    <Property Name="HR" Id="{ee86a53c-863d-4cb1-945a-719afaee9193}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{7386810f-eca8-4bd1-9276-fcc98215ccd8}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ListOfMoversToCheck" Id="{d0696dd1-ec69-4f6e-911b-ce8e251538d6}">
+      <Declaration><![CDATA[PROPERTY ListOfMoversToCheck : I_CH_List]]></Declaration>
+      <Set Name="Set" Id="{049c481b-a11e-4754-ad00-b7b3d8ac8249}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoverAtTrigger" Id="{79b21152-3f8e-411d-8737-5e86b4875174}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverAtTrigger : I_XTS_Mover]]></Declaration>
+      <Get Name="Get" Id="{a6ac075a-345c-425b-bfd2-6f3067a58455}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverDetected" Id="{ba0c50c9-9bc8-44a5-98f4-9433ef35f31a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverDetected : BOOL]]></Declaration>
+      <Get Name="Get" Id="{159bb0f2-496f-439c-8f32-c4783e326f15}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{f6c0903c-8316-4146-a5df-eb5c54641ed0}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{0de141bc-92f3-49f5-90b0-e2fe230225ef}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{5f6f914c-cc07-4113-91dc-ddb5827fa663}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="TimeStamp" Id="{d0533e2f-0608-43d0-80d9-f762342157b4}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TimeStamp : T_DCTIME64;]]></Declaration>
+      <Get Name="Get" Id="{11b40524-060e-47f8-8962-af1c7c26a318}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="TriggerDirection" Id="{018277f0-84fb-4720-9b55-07c191e35504}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TriggerDirection : Tc2_MC2.MC_Direction]]></Declaration>
+      <Get Name="Get" Id="{3b889148-5f62-4ea9-88c1-e58f96900af7}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{36e70e54-a41b-425c-acef-33e2619ed5b0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>

@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Zone" Id="{7db45b8a-5aa8-4316-9d97-1aa8803c6e23}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Zone
+]]></Declaration>
+    <Property Name="CtsMoversInZone" Id="{aa453e36-2a5f-46e9-9e39-4fa51ee10237}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY CtsMoversInZone : UINT]]></Declaration>
+      <Get Name="Get" Id="{0b5dc05d-9a4c-431d-9d12-9a4973317021}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="EndPositionOnTrack" Id="{88fe8e1c-88e5-44d8-8f35-654e93fef4d5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY EndPositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{d2ce2734-b670-4160-b096-7cc726bac9f3}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{67232881-186b-4c26-b242-36e181484155}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="HR" Id="{d4a06b73-9e0b-448f-8cbe-cd3748ec8819}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{a459bc5f-b7ed-4a22-88bf-a7bf9ed641a0}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="ListOfMoversToCheck" Id="{e586d3df-6d81-4768-aba8-9db87baca2d4}">
+      <Declaration><![CDATA[PROPERTY ListOfMoversToCheck : I_CH_List]]></Declaration>
+      <Set Name="Set" Id="{89d2b10e-e87c-487e-9c90-68d2a809c511}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="MoversInZone" Id="{24c15972-a22e-431d-9231-68338ab75ac5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInZone : REFERENCE TO ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF I_XTS_Mover_PLC]]></Declaration>
+      <Get Name="Get" Id="{0e2d445e-d890-4ba3-8ca1-a977c165879d}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="StartPositionOnTrack" Id="{25076cef-91ef-4644-85c9-0c3b242003c7}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY StartPositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{89356039-4f35-4ce3-89ca-2094c04bcaca}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{901a4a02-1fff-4282-b9d1-5707b52b845f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+  </Itf>
+</TcPlcObject>

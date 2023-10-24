@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XTS_Environment" Id="{a8afa6a2-387c-4b6e-9be2-2721f7668e6b}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+FUNCTION_BLOCK FB_XTS_Environment EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Environment
+VAR
+	{attribute 'hide'}
+	bInitDone :BOOL := FALSE;
+	{attribute 'hide'}
+	ipXtsSystem : I_XTS_System_Registration;
+
+	fbUtilityEnvironment : Tc3_XTS_Utility.FB_TcIoXtsEnvironment;
+	
+	{attribute 'hide'}
+	fbXtsEnvironmentVisu : Tc3_XTS_Utility.FB_XtsEnvironmentVisu;
+		
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="FB_init" Id="{93d2d8fa-7888-47d9-ae7c-4547c74b0ffa}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+
+	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object	
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
+IF bInitRetains THEN 
+	
+	//Regristrate object in System
+	IF ipXtsSystem <> 0 THEN
+		ipXtsSystem.LinkEnvironment(THIS^);
+		THIS^.ipXtsSystem := ipXtsSystem;
+	END_IF
+
+
+
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="HR" Id="{1aeed165-c0b0-44f5-ad1d-c9c5538bc734}">
+      <Declaration><![CDATA[{warning 'add property implementation'}
+{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT
+]]></Declaration>
+      <Get Name="Get" Id="{5822a1eb-9a43-4828-929e-0f8351589bc4}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[HR := S_OK;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{7cd9bb8a-718f-430d-9839-512439f8bc63}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF NOT THIS^.bInitDone THEN
+	Initialize := S_PENDING;	
+
+	//Enable init Info Server if needed
+	fbUtilityEnvironment.P_XtsEnvironmentConfiguration.bEnableInitInfoServer := TRUE;
+
+	//Enable init CA Group if needed
+	fbUtilityEnvironment.P_XtsEnvironmentConfiguration.bEnableInitCaGroup := TRUE;
+
+	//Start init
+	IF fbUtilityEnvironment.Init(bExecute := TRUE) THEN
+		//Stop init
+		fbUtilityEnvironment.Init(bExecute := FALSE);
+		THIS^.bInitDone := TRUE;
+	END_IF
+	
+	// Link data Pointer 
+	fbXtsEnvironmentVisu(ipTcIoXtsEnvironment:=UtilityEnvirement);
+ELSE
+	//Check if init succeeded
+	IF fbUtilityEnvironment.P_IsInitialized THEN
+		// check if the position detection of the Movers has been completed
+		IF NOT fbUtilityEnvironment.XpuTcIo(1).GetAreAllPositionsValid()
+		OR NOT fbUtilityEnvironment.XpuTcIo(1).GetIsTeachingValid()
+		OR NOT fbUtilityEnvironment.XpuTcIo(1).GetDetectedMoverCount() = fbUtilityEnvironment.XpuTcIo(1).GetExpectedMoverCount() THEN
+			Initialize := S_OK;		
+		END_IF
+	END_IF
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="TrackIsRing" Id="{24b8be3c-88b3-4d84-8780-5184e661106f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackIsRing : BOOL
+]]></Declaration>
+      <Get Name="Get" Id="{2537b9e8-b626-449a-ba90-9f59377c75f6}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF fbUtilityEnvironment.P_IsInitialized THEN
+	TrackIsRing := fbUtilityEnvironment.Mc2CaGroup(1).GetRailIsRing();
+END_IF
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="TrackLength" Id="{7be4b154-e932-4cd8-beb2-5b72757cfd1e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY TrackLength : LREAL
+]]></Declaration>
+      <Get Name="Get" Id="{0b5e46ca-1791-4ddd-87d2-a3225362ce10}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF fbUtilityEnvironment.P_IsInitialized THEN
+	TrackLength := fbUtilityEnvironment.Mc2CaGroup(1).GetRailLength();
+END_IF
+
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{84f7e194-e354-4685-a40e-bbd23c57553a}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR
+	hr : HRESULT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[hr := S_OK;
+
+fbXtsEnvironmentVisu.Cycle();
+
+Update:= hr;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="UtilityEnvirement" Id="{cfb048a9-88dd-4d21-8adb-997f876cb0e4}">
+      <Declaration><![CDATA[PROPERTY UtilityEnvirement : Tc3_XTS_Utility.I_TcIoXtsEnvironment]]></Declaration>
+      <Get Name="Get" Id="{4e7a3925-6766-42f7-b653-fba6145e43da}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[//Interface to envirement
+UtilityEnvirement := fbUtilityEnvironment;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+  </POU>
+</TcPlcObject>

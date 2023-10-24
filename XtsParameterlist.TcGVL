@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="XtsParameterlist" Id="{a0a7e988-ac8b-4d02-827c-c315d3a6afd8}" ParameterList="True">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL CONSTANT
+	MAX_MOVER_PER_SYSTEM : UINT := 50;
+	STATISTIC_AVG_PERIOD : TIME := T#10S;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

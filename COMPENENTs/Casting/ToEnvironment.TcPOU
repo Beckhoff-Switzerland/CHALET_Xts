@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="ToEnvironment" Id="{fff49141-34f4-4b62-b8aa-2cb9baa91941}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ToEnvironment : BOOL
+VAR_INPUT
+	ipChObject : I_CH_OBJECT;
+	ipXtsEnvironment : REFERENCE TO I_XTS_Environment;
+END_VAR
+
+VAR
+	ipTmp : I_XTS_Environment;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* 
+   1. Test if the interface exists
+   2. Test if the object implements a "Object" interface 
+   3. Write reference to interface in parameter
+   4. Returne TRUE if succesfull
+*)
+IF ipChObject <> 0 AND_THEN __QUERYINTERFACE(ipChObject,ipTmp) THEN
+	ipXtsEnvironment := ipTmp;
+	ToEnvironment := TRUE;
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

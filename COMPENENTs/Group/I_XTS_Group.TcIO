@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Group" Id="{3aa79aea-eed3-48e5-9919-147a82f1dcae}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Group  EXTENDS __SYSTEM.IQueryInterface
+ ]]></Declaration>
+    <Method Name="AddAxisListToGroup" Id="{14ba38af-55d1-438e-87b3-bcb9deeb2c08}">
+      <Declaration><![CDATA[METHOD AddAxisListToGroup : HRESULT
+VAR_INPUT
+	ipMovers : I_CH_List;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="AddingAxisToGroup" Id="{15bb7821-6d23-406e-8575-4d183a93525a}">
+      <Declaration><![CDATA[METHOD AddingAxisToGroup : HRESULT
+
+]]></Declaration>
+    </Method>
+    <Property Name="AllAxesStanding" Id="{18b8de0f-763c-4967-b374-93d6f61fbccc}">
+      <Declaration><![CDATA[PROPERTY AllAxesStanding : Bool]]></Declaration>
+      <Get Name="Get" Id="{93882710-e532-48df-a654-6f38816b3433}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="ChangeGapMode" Id="{53b260d0-0e84-422c-bdf9-45d5721e6a88}">
+      <Declaration><![CDATA[METHOD ChangeGapMode : HRESULT
+VAR_INPUT
+	bFast : BOOL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Disable" Id="{49a59ea7-a3d9-4b46-895b-593b3e02df7c}">
+      <Declaration><![CDATA[METHOD Disable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Enable" Id="{1b778060-30cb-4774-8cdb-b397b8102027}">
+      <Declaration><![CDATA[METHOD Enable : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="GroupEnabled" Id="{fe8dbb55-e36a-4328-baaa-b3c17dbcf20e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY GroupEnabled : BOOL]]></Declaration>
+      <Get Name="Get" Id="{9af12953-3591-4bd2-a3b7-484b60d9650f}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="HR" Id="{531b6a0c-8750-4388-b1bc-f79833a91add}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY HR : HRESULT]]></Declaration>
+      <Get Name="Get" Id="{20a7df7f-4ea8-45e0-bc93-01d51e482e82}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Method Name="Initialize" Id="{97c43364-5a87-4076-9341-9fd384ac3f88}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="RemoveAxisFromGroup" Id="{ae50f6db-1093-4586-8191-72a2fb88fe19}">
+      <Declaration><![CDATA[METHOD RemoveAxisFromGroup : HRESULT
+VAR_INPUT
+	ipMover : I_XTS_Mover;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Reset" Id="{0a246b89-9fb9-4319-9113-6eb69b6d818e}">
+      <Declaration><![CDATA[METHOD Reset : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="UngroupAllAxes" Id="{95ad16a3-687a-4192-a41d-ae3a71ea2284}">
+      <Declaration><![CDATA[METHOD UngroupAllAxes : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="Update" Id="{3d7c5dc0-7d33-45d1-920d-34225572deeb}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+    <Property Name="UtilityCAGroup" Id="{a9fc9959-e685-4084-8d82-b3e62e08ab6f}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY UtilityCAGroup : I_Mc2CaGroup]]></Declaration>
+      <Get Name="Get" Id="{88e70f16-e941-4f3c-b9b2-3386c05d27cd}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <ObjectProperties>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="UMLStereoTypeContainerObject">
+            <v n="IsType" t="UMLType">BaseArea</v>
+            <v n="Stereotype">""</v>
+            <d n="Stereotypes" t="Hashtable" />
+          </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="String">System.String</Type>
+          <Type n="UMLStereoTypeContainerObject">{30250973-b110-4e31-b562-c102e042dca4}</Type>
+          <Type n="UMLType">{0197b136-405a-42ee-bb27-fd08b621d0cf}</Type>
+        </TypeList>
+      </XmlArchive>
+    </ObjectProperties>
+  </Itf>
+</TcPlcObject>
