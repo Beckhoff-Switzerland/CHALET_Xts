@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Mover" Id="{5e8caa86-9ac3-4695-8c34-e1bf5bc823f4}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Mover EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XTS_Mover EXTENDS I_CH_Object
 ]]></Declaration>
     <Property Name="Coupled" Id="{f139e77a-7c2a-489e-91ef-49f7b2e94bba}">
       <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}

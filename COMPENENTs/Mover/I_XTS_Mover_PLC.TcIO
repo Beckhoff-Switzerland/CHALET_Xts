@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Mover_PLC" Id="{e47f7de2-f04a-480e-a2ce-8f8f5f0b1a53}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Mover_PLC EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XTS_Mover_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Property Name="DefaultAcceleration" Id="{536791b8-3d03-4e24-a9a7-7540cfae8367}">
       <Declaration><![CDATA[{attribute 'OPC.UA.DA.Property' := '1'}
@@ -46,6 +46,14 @@ PROPERTY DrivenDistance : LREAL]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="FullAccess" Id="{b4794be4-1985-4c4e-aea4-f3bc2f43fe10}">
+      <Declaration><![CDATA[(*The _ PLC interface provides the user with a simplified interface for commanding between the stations. Sometimes, however, this is not enough. 
+Either you get the corresponding interface with the __Queryinterface or you can get full access with this property.*)
+PROPERTY FullAccess : I_XTS_Mover]]></Declaration>
+      <Get Name="Get" Id="{69594b54-a893-46ed-8f3d-c3d54a355990}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="LagDistance" Id="{b10a5231-09c5-4e83-9ade-98b2be0f8351}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LagDistance : LREAL
@@ -58,6 +66,13 @@ PROPERTY LagDistance : LREAL
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LastCmdTargedGap : LREAL]]></Declaration>
       <Get Name="Get" Id="{18c52b15-646e-4d6f-bf50-b3c739ba8cef}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="LUID" Id="{207f3dfb-349c-4050-8a27-14772762c31c}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY LUID : STRING]]></Declaration>
+      <Get Name="Get" Id="{1d565dfc-c9d9-41b4-9a6f-0d83a8a7b355}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>

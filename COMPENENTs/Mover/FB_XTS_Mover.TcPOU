@@ -32,7 +32,7 @@ VAR
 	{attribute 'hide'}	
 	lrTrackLentgh 			: LREAL; //[mm]  Modulo
 	{attribute 'hide'}
-	fbFeedback 					: CHALET_BaseComponents.FB_CH_Feedback;;
+	fbFeedback 					: CHALET_BaseComponents.FB_CH_Feedback(ipSourceInfo := fbSourceInfo);;
 	
 END_VAR
 VAR PERSISTENT
@@ -188,10 +188,13 @@ VAR_INPUT
 	
 	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object
 END_VAR
-]]></Declaration>
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
-IF bInitRetains THEN 
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
 	
 
 	//Regristrate object in System
@@ -204,6 +207,7 @@ IF bInitRetains THEN
 	
 END_IF
 
+bFBInitCalledOnce := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -216,6 +220,19 @@ END_VAR
 ]]></Declaration>
         <Implementation>
           <ST><![CDATA[Feedback := THIS^.fbFeedback;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="FullAccess" Id="{0cd8020e-3c30-4c65-a148-8455972ce3b7}">
+      <Declaration><![CDATA[(*The _ PLC interface provides the user with a simplified interface for commanding between the stations. Sometimes, however, this is not enough. 
+Either you get the corresponding interface with the __Queryinterface or you can get full access with this property.*)
+PROPERTY FullAccess : I_XTS_Mover]]></Declaration>
+      <Get Name="Get" Id="{dc1cc900-5ae5-4ac7-b5fd-19291576e9ec}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[FullAccess := (THIS^);]]></ST>
         </Implementation>
       </Get>
     </Property>
@@ -284,7 +301,7 @@ IF NOT THIS^.bInitDone THEN
 	
 	//Validate Settings
 	IF (lrTrackLentgh <= 0) THEN
-			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);		
+		fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);		
 	END_IF
 	
 

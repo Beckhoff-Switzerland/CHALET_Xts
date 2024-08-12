@@ -39,7 +39,7 @@ VAR
 	dummyAxis : AXIS_REF;
 	
 	{attribute 'hide'}	
-	fbFeedback : CHALET_BaseComponents.FB_CH_Feedback;
+	fbFeedback : CHALET_BaseComponents.FB_CH_Feedback(ipSourceInfo := fbSourceInfo);
 	
 	{attribute 'hide'}
 	eActiveCommand : E_NcGroupCommands := E_NcGroupCommands.None;
@@ -70,7 +70,7 @@ ELSIF ipMovers = 0 THEN
 		
 ELSE
 	// duplicate List
-	THIS^.fbMovers.Duplicate(CopyFrom := ipMovers);
+	THIS^.fbMovers.Duplicate(ipListCopyFrom := ipMovers);
 	
 	
 	THIS^.nState_SEQ_Adding := 1;
@@ -270,10 +270,13 @@ VAR_INPUT
 	
 	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object	
 END_VAR
-]]></Declaration>
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
-IF bInitRetains THEN 
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
 	
 	//Regristrate object in System
 	IF ipXtsSystem <> 0 THEN
@@ -281,10 +284,9 @@ IF bInitRetains THEN
 		THIS^.ipXtsSystem := ipXtsSystem;
 	END_IF
 
-
-
 END_IF
 
+bFBInitCalledOnce := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -315,9 +317,14 @@ END_VAR
     </Property>
     <Method Name="Initialize" Id="{ba4b61c8-efb7-43cd-a755-5511a1c0b218}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
-VAR_INPUT
+VAR
+	stVarInfo : __SYSTEM.VAR_INFO;
 END_VAR
-]]></Declaration>
+VAR_INST
+	//This error cannot be reset. Requires a reset cold
+	{attribute 'hide'}	
+	fbInitError : FB_TcAlarm;
+END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.bInitDone THEN
 
@@ -326,7 +333,13 @@ END_VAR
 	
 	// Check if link to Group is mapped
 	IF NcParameterlist.ERROR_IF_NC_AXIS_IS_NOT_MAPPED AND_THEN F_GetMappingStatus(ADR(THIS^.GroupRef.NcToPlc), SIZEOF(THIS^.GroupRef.NcToPlc)) <> EPlcMappingStatus.MS_Mapped THEN
-		//ERROR NcToPlc
+		IF NOT fbInitError.bRaised THEN 
+			//This error cannot be reset. Requires a reset cold
+			fbInitError.CreateEx(stEventEntry := TC_EVENTS.CHALET_NC_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			stVarInfo := __VARINFO(GroupRef.NcToPlc);
+			fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+			fbInitError.Raise(0);
+		END_IF
 		Initialize := E_FAIL;
 		RETURN;
 	END_IF
@@ -334,7 +347,13 @@ END_VAR
 	
 	// Check if link to Group is mapped
 	IF NcParameterlist.ERROR_IF_NC_AXIS_IS_NOT_MAPPED AND_THEN F_GetMappingStatus(ADR(THIS^.GroupRef.PlcToNc), SIZEOF(THIS^.GroupRef.PlcToNc)) <> EPlcMappingStatus.MS_Mapped THEN
-		//ERROR PlcToNc
+		IF NOT fbInitError.bRaised THEN 
+			//This error cannot be reset. Requires a reset cold
+			fbInitError.CreateEx(stEventEntry:= TC_EVENTS.CHALET_NC_Events.VariableLinkMissing, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			stVarInfo := __VARINFO(GroupRef.PlcToNc);
+			fbInitError.ipArguments.AddString(stVarInfo.Symbol);
+			fbInitError.Raise(0);
+		END_IF
 		Initialize := E_FAIL;		
 		RETURN;
 	END_IF	
@@ -354,6 +373,24 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="Mapped" Id="{406854f8-defd-4dbc-8f5d-57a6b8e210a5}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Mapped : BOOL //Project is mapped to NC (NcToPlc and PlcToNc)
+]]></Declaration>
+      <Get Name="Get" Id="{0b211a2b-e6a4-46cd-8f43-d5fa471b858c}">
+        <Declaration><![CDATA[VAR
+	bNcToPlcNotMapped 	: BOOL;
+	bPlcToNcNotMapped 	: BOOL;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[bNcToPlcNotMapped := F_GetMappingStatus(ADR(THIS^.GroupRef.NcToPlc), SIZEOF(THIS^.GroupRef.NcToPlc)) <> EPlcMappingStatus.MS_Mapped;
+bPlcToNcNotMapped := F_GetMappingStatus(ADR(THIS^.GroupRef.PlcToNc), SIZEOF(THIS^.GroupRef.PlcToNc)) <> EPlcMappingStatus.MS_Mapped;
+
+Mapped := NOT bNcToPlcNotMapped AND NOT bPlcToNcNotMapped;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="OID" Id="{3699cc38-0bf3-41cc-a243-eea585becb0b}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY OID : OTCID]]></Declaration>

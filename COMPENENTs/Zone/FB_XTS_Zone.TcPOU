@@ -77,10 +77,14 @@ VAR_INPUT
 	
 	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object
 END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
-IF bInitRetains THEN 
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
 	;
 END_IF
 
@@ -89,6 +93,8 @@ IF ipXtsSystem <> 0 AND THIS^.ipXtsSystem = 0 THEN
 	ipXtsSystem.RegisterZone(THIS^);
 	THIS^.ipXtsSystem := ipXtsSystem;
 END_IF
+
+bFBInitCalledOnce := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -185,8 +191,8 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 		IF ToMover_PLC(THIS^.ipListOfMoversToCheck.GetNextObject(),ipMoverPlc) THEN
 			
 			//If in zone
-			IF FUN_InLimitTest(fMinimum:= fStartPositionOnTrack, fMaximum:=fEndPositionOnTrack, fInput:= ipMoverPlc.PositionOnTrack) THEN
-				fDistToStart := FUN_GetDistToPosModulo(fActualPosition:= ipMoverPlc.PositionOnTrack, fTargedPosition:= fEndPositionOnTrack, fModulo := fTrackLentgh);
+			IF F_InLimitTest(fMinimum:= fStartPositionOnTrack, fMaximum:=fEndPositionOnTrack, fInput:= ipMoverPlc.PositionOnTrack) THEN
+				fDistToStart := F_GetDistToPosModulo(fActualPosition:= ipMoverPlc.PositionOnTrack, fTargedPosition:= fEndPositionOnTrack, fModulo := fTrackLentgh);
 				
 				//Check array of movers and decide if the current one is closer to 
 				FOR nLoopIndex := 0 TO (XtsParameterlist.MAX_MOVER_PER_SYSTEM-1) DO

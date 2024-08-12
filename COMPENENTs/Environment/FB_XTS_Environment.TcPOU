@@ -5,11 +5,15 @@
 FUNCTION_BLOCK FB_XTS_Environment EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Environment
 VAR
 	{attribute 'hide'}
-	bInitDone :BOOL := FALSE;
+	bInitDone : BOOL ;
 	{attribute 'hide'}
 	ipXtsSystem : I_XTS_System_Registration;
 
 	fbUtilityEnvironment : Tc3_XTS_Utility.FB_TcIoXtsEnvironment;
+	
+	//Ethercat Diagnostic of all XTS Motors
+	fbXtsEtherCatDiag		: FB_XtsEtherCatDiag(	ipUtilityEnvironmentv 				:=  fbUtilityEnvironment,
+													bCheckIfTc3EventloggerIsSelected 	:= XtsParameterlist.B_MSG_IF_TC3EVENTLOGGER_IS_NOT_DEFAULT);
 	
 	{attribute 'hide'}
 	fbXtsEnvironmentVisu : Tc3_XTS_Utility.FB_XtsEnvironmentVisu;
@@ -27,10 +31,14 @@ VAR_INPUT
 
 	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object	
 END_VAR
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
-IF bInitRetains THEN 
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
 	
 	//Regristrate object in System
 	IF ipXtsSystem <> 0 THEN
@@ -41,6 +49,8 @@ IF bInitRetains THEN
 
 
 END_IF
+
+bFBInitCalledOnce := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -60,7 +70,9 @@ END_VAR
     </Property>
     <Method Name="Initialize" Id="{7cd9bb8a-718f-430d-9839-512439f8bc63}">
       <Declaration><![CDATA[METHOD Initialize : HRESULT
-]]></Declaration>
+VAR 
+	hr : HRESULT;
+END_VAR]]></Declaration>
       <Implementation>
         <ST><![CDATA[IF NOT THIS^.bInitDone THEN
 	Initialize := S_PENDING;	
@@ -71,27 +83,26 @@ END_VAR
 	//Enable init CA Group if needed
 	fbUtilityEnvironment.P_XtsEnvironmentConfiguration.bEnableInitCaGroup := TRUE;
 
-	//Start init
-	IF fbUtilityEnvironment.Init(bExecute := TRUE) THEN
+	IF NOT fbUtilityEnvironment.P_IsInitialized THEN	
+		//Start init
+		fbUtilityEnvironment.Init(bExecute := TRUE); 
+		hr := GetMostSignificant(hr, S_PENDING);	
+ 	ELSE
 		//Stop init
 		fbUtilityEnvironment.Init(bExecute := FALSE);
-		THIS^.bInitDone := TRUE;
 	END_IF
 	
 	// Link data Pointer 
 	fbXtsEnvironmentVisu(ipTcIoXtsEnvironment:=UtilityEnvirement);
-ELSE
-	//Check if init succeeded
-	IF fbUtilityEnvironment.P_IsInitialized THEN
-		// check if the position detection of the Movers has been completed
-		IF NOT fbUtilityEnvironment.XpuTcIo(1).GetAreAllPositionsValid()
-		OR NOT fbUtilityEnvironment.XpuTcIo(1).GetIsTeachingValid()
-		OR NOT fbUtilityEnvironment.XpuTcIo(1).GetDetectedMoverCount() = fbUtilityEnvironment.XpuTcIo(1).GetExpectedMoverCount() THEN
-			Initialize := S_OK;		
-		END_IF
-	END_IF
+
+	// Ethercat Diagnostic of all XTS Motors
+	hr := GetMostSignificant(hr, fbXtsEtherCatDiag.Initialize());
+	
+
+	THIS^.bInitDone  :=  hr = S_OK;
 END_IF
-]]></ST>
+
+Initialize := hr;]]></ST>
       </Implementation>
     </Method>
     <Property Name="TrackIsRing" Id="{24b8be3c-88b3-4d84-8780-5184e661106f}">
@@ -133,11 +144,15 @@ VAR
 	hr : HRESULT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[hr := S_OK;
+        <ST><![CDATA[
+fbXtsEtherCatDiag.Update();
 
 fbXtsEnvironmentVisu.Cycle();
 
-Update:= hr;]]></ST>
+Update:= hr;
+
+
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="UtilityEnvirement" Id="{cfb048a9-88dd-4d21-8adb-997f876cb0e4}">

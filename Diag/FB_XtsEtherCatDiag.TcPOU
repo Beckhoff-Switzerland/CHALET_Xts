@@ -1,0 +1,247 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_XtsEtherCatDiag" Id="{69aa6f42-a2bd-4748-a22d-806928aef51a}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
+(* This FB generates an array with all XTS motor modules. These are now checked cyclically one after the other to see whether the EtherCAT slave controller is in OP mode *)
+FUNCTION_BLOCK FB_XtsEtherCatDiag EXTENDS CHALET_BaseComponents.FB_CH_Object
+VAR
+	ipUtilityEnvironmentv : Tc3_XTS_Utility.I_TcIoXtsEnvironment;
+	bCheckIfTc3EventloggerIsSelected : BOOL;
+	stMotorDiag : ARRAY[0..N_MAX_CTS_MOTORMODULES-1] OF ST_XtsMotorEtherCatDiag;
+	bInitDone : BOOL;
+	nIdxTrigger : UINT;
+	nCtnMotorModules : UINT;
+	fbMsgWrongEventlogger : FB_TcMessage;
+	bEventLoggerChecked : BOOL;
+END_VAR
+
+VAR CONSTANT
+	N_MAX_CTS_MOTORMODULES : UINT := XtsParameterlist.MAX_MOTORS_PER_SYSTEM;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="FB_init" Id="{b770fc0e-86d4-4d0c-92d5-a9027c5ecb36}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	bInitRetains : BOOL; // if TRUE, the retain variables are initialized (warm start / cold start)
+	bInCopyCode : BOOL;  // if TRUE, the instance afterwards gets moved into the copy code (online change)
+	
+	ipUtilityEnvironmentv : Tc3_XTS_Utility.I_TcIoXtsEnvironment;
+	
+	//Message if TC3_Eventlogger is not set as Eventlogger. Not possible to change online.
+	//Must be adjusted in the following object: XtsProcessingUnit/Parameter(Init)/Diagnostic/UsedEventLogger 
+	bCheckIfTc3EventloggerIsSelected : BOOL;
+END_VAR
+
+VAR
+	fbGetCurTaskIdx  : GETCURTASKINDEX;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+THIS^.ipUtilityEnvironmentv := ipUtilityEnvironmentv;
+THIS^.bCheckIfTc3EventloggerIsSelected := bCheckIfTc3EventloggerIsSelected;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Initialize" Id="{c722c4dc-5f74-4aca-b87c-1669b3c9d98e}">
+      <Declaration><![CDATA[METHOD Initialize : HRESULT
+VAR
+	ipObject : ITComObject;
+	sObjectName : STRING;
+	nIdx, nIdxXpu, nIdxPart, nIdxModule : UINT;
+END_VAR
+VAR_INST
+
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Validate interface
+IF ipUtilityEnvironmentv = 0 THEN
+	Initialize := E_FAIL;
+	RETURN;
+END_IF
+
+//Wait for an valide XpuCount. At beginn, count is 0
+IF ipUtilityEnvironmentv.P_XpuCount = 0 THEN
+	Initialize := S_PENDING;;
+	RETURN;
+END_IF
+
+//Wait for init done
+FOR nIdxXpu := 1 TO TO_UINT(ipUtilityEnvironmentv.P_XpuCount)  DO
+	IF NOT ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).P_IsInitialized THEN
+		Initialize := S_PENDING;;
+		RETURN;
+	END_IF
+END_FOR
+
+//Message if TC3_Eventlogger is not set as Eventlogger. Not possible to change online.
+//Must be adjusted in the following object: XtsProcessingUnit/Parameter(Init)/Diagnostic/UsedEventLogger 
+IF NOT bEventLoggerChecked  AND THIS^.bCheckIfTc3EventloggerIsSelected THEN
+	FOR nIdxXpu := 1 TO TO_UINT(ipUtilityEnvironmentv.P_XpuCount) DO
+		IF ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).GetUsedEventLogger() <> EventMessenger.TC3EventLogger THEN
+			fbMsgWrongEventlogger.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.TC3EventloggerCheck, ipSourceInfo := THIS^.fbSourceInfo);
+			fbMsgWrongEventlogger.Send(0);
+			EXIT;
+		END_IF
+	END_FOR
+END_IF
+bEventLoggerChecked := TRUE;
+
+
+
+//For all Modul in all Parts in all Processing-Units
+nIdx := 0;
+FOR nIdxXpu := 1 TO TO_UINT(ipUtilityEnvironmentv.P_XpuCount) DO
+	FOR nIdxPart := 1 TO ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).P_PartCount DO
+		FOR nIdxModule := 1 TO ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).PartTcIo(nIdxPart).P_ModuleCount DO
+			//Error, array is to small
+			IF (nIdx > (N_MAX_CTS_MOTORMODULES-1)) THEN
+				Initialize := E_FAIL;
+				RETURN;
+			END_IF
+			
+			//Read object name of motor module
+			FW_ObjMgr_GetObjectInstance(oid:= ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).PartTcIo(nIdxPart).ModuleTcIo(nIdxModule).GetMotorTerminalOid() , iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipObject));
+			//Read Name of object if interafce is valid
+			IF ipObject <> 0 AND_THEN (ipObject.TcGetObjectName(ADR(sObjectName), SIZEOF(sObjectName)) = S_OK) THEN
+				//Set source name + Modulename
+				stMotorDiag[nIdx].fbSource.sName := '';
+				stMotorDiag[nIdx].fbSource.ExtendName(sObjectName);
+				stMotorDiag[nIdx].fbSource.ExtendName(' Part:');
+				stMotorDiag[nIdx].fbSource.ExtendName(TO_STRING(nIdxPart));
+				stMotorDiag[nIdx].fbSource.ExtendName(' Module:');
+				stMotorDiag[nIdx].fbSource.ExtendName(TO_STRING(nIdxModule));	
+				ipObject.TcRelease();
+			ELSE
+				//Set source name
+				stMotorDiag[nIdx].fbSource.sName := '';
+				stMotorDiag[nIdx].fbSource.ExtendName('Part:');
+				stMotorDiag[nIdx].fbSource.ExtendName(TO_STRING(nIdxPart));
+				stMotorDiag[nIdx].fbSource.ExtendName(' Module:');
+				stMotorDiag[nIdx].fbSource.ExtendName(TO_STRING(nIdxModule));	
+			END_IF
+			
+
+		
+			//Create alarm
+			stMotorDiag[nIdx].fbAlarmNotInOpMode.CreateEx(
+					stEventEntry := TC_EVENTS.CHALET_XTS_Events.EtherCatSlaveNotInOpMode, 
+					ipSourceInfo := stMotorDiag[nIdx].fbSource, 
+					bWithConfirmation := FALSE);
+					
+			stMotorDiag[nIdx].fbAlarmNoCommunication.CreateEx(	
+					stEventEntry:= TC_EVENTS.CHALET_XTS_Events.NoCommunication,
+					ipSourceInfo 	:= stMotorDiag[nIdx].fbSource, 
+					bWithConfirmation := FALSE);
+					
+			//store ADS conncetion info
+			stMotorDiag[nIdx].fbGetSlaveState.sNetId := ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).PartTcIo(nIdxPart).ModuleTcIo(nIdxModule).CoE.AmsNetId;
+			stMotorDiag[nIdx].fbGetSlaveState.nSlaveAddr := ipUtilityEnvironmentv.XpuTcIo(nIdxXpu).PartTcIo(nIdxPart).ModuleTcIo(nIdxModule).GetDriveAddress();		
+
+			nIdx := nIdx +1;	
+			THIS^.nCtnMotorModules := nIdx;
+		END_FOR
+	END_FOR
+END_FOR
+bInitDone := TRUE;
+Initialize := S_OK;;]]></ST>
+      </Implementation>
+    </Method>
+    <Property Name="Initialized" Id="{007d6bfd-2d98-4578-bdd8-817168850a8d}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY Initialized : BOOL]]></Declaration>
+      <Get Name="Get" Id="{3d8e9dcc-bc36-459c-86f5-652c168989b8}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[Initialized := bInitDone;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Method Name="Update" Id="{e2a58c25-f8e1-494d-83ab-e744d78726b8}">
+      <Declaration><![CDATA[METHOD Update : HRESULT
+VAR
+	nIdx : UINT;
+	bErrorNoCom : BOOL;
+	bInOpMode : BOOL;
+	bReadOfStateFailed : BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Force to do init
+IF NOT THIS^.bInitDone THEN
+	Initialize();
+	RETURN;
+END_IF
+
+
+//Trigger each plc cycle 1 read of the motor ethercat slave state - if not allready busy
+IF NOT stMotorDiag[nIdxTrigger].fbGetSlaveState.bBusy THEN
+	stMotorDiag[nIdxTrigger].fbGetSlaveState(bExecute := TRUE);
+	stMotorDiag[nIdxTrigger].fbGetSlaveState(bExecute := FALSE);
+	nIdxTrigger := (nIdxTrigger + 1)MOD THIS^.nCtnMotorModules;
+END_IF
+
+
+
+//For all FBs
+FOR nIdx := 0 TO (THIS^.nCtnMotorModules-1) DO
+	(*	0x___1 = Slave in 'INIT' state
+		0x___2 = Slave in 'PREOP' state
+		0x___3 = Slave in 'BOOT' state
+		0x___4 = Slave in 'SAFEOP' state
+		0x___8 = Slave in 'OP' state		*)
+		
+		
+	//Write Ethercat linkState in TC3 Eventlogger
+	bErrorNoCom := (stMotorDiag[nIdx].fbGetSlaveState.state.linkState = 16#01(*NotPresent*));
+	IF (NOT bErrorNoCom AND stMotorDiag[nIdx].fbAlarmNoCommunication.bRaised) THEN
+		//No error - Reset	
+		stMotorDiag[nIdx].fbAlarmNoCommunication.Clear(0,0);
+	ELSIF (bErrorNoCom AND NOT stMotorDiag[nIdx].fbAlarmNoCommunication.bRaised) THEN
+		//New Error - Raise
+		stMotorDiag[nIdx].fbAlarmNoCommunication.ipArguments.Clear();
+		stMotorDiag[nIdx].fbAlarmNoCommunication.Raise(0);
+	ELSE
+		//Alarm is already active
+		;
+	END_IF	
+
+		
+	//Re-Raise alarm on change of state if ethercatslave is not in OP-Mode - Clear if NoCommunication is raised
+	bInOpMode := (stMotorDiag[nIdx].fbGetSlaveState.state.deviceState = 16#08(*OP*));
+	bReadOfStateFailed := ((stMotorDiag[nIdx].fbGetSlaveState.state.deviceState AND 16#0F(*Mask values 0-15*)) = 16#00);
+	IF ((bInOpMode OR bErrorNoCom OR bReadOfStateFailed) AND stMotorDiag[nIdx].fbAlarmNotInOpMode.bRaised) THEN
+		//No error - Reset	
+		stMotorDiag[nIdx].fbAlarmNotInOpMode.Clear(0,0);
+		
+	ELSIF (bInOpMode OR bErrorNoCom OR bReadOfStateFailed) THEN
+		; //Do nothing
+		
+	ELSIF (stMotorDiag[nIdx].fbGetSlaveState.state.deviceState <> stMotorDiag[nIdx].nLastState) THEN
+		//New Error - Reset, Create and Raise
+		stMotorDiag[nIdx].fbAlarmNotInOpMode.Clear(0,0);
+		CASE (stMotorDiag[nIdx].fbGetSlaveState.state.deviceState AND 16#0F(*Mask values 0-15*)) OF
+			1:  stMotorDiag[nIdx].fbAlarmNotInOpMode.ipArguments.Clear().AddString('INIT'); 	
+			2:  stMotorDiag[nIdx].fbAlarmNotInOpMode.ipArguments.Clear().AddString('PREOP');	
+			3:  stMotorDiag[nIdx].fbAlarmNotInOpMode.ipArguments.Clear().AddString('BOOT');		
+			4:  stMotorDiag[nIdx].fbAlarmNotInOpMode.ipArguments.Clear().AddString('SAFEOP');	
+		END_CASE
+		stMotorDiag[nIdx].fbAlarmNotInOpMode.Raise(0);
+		
+	ELSE
+		//Alarm is already active
+		;
+	END_IF
+	stMotorDiag[nIdx].nLastState := stMotorDiag[nIdx].fbGetSlaveState.state.deviceState;
+
+	
+	//Call cyclic fb
+	stMotorDiag[nIdx].fbGetSlaveState();
+END_FOR]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

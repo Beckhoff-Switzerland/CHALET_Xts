@@ -25,7 +25,7 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF THIS^.Error THEN
+        <ST><![CDATA[IF THIS^.Feedback.Error THEN
 	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
 	//Error active/not ready
 		
@@ -99,7 +99,7 @@ VAR
 	nInactiveInstance : UINT;
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[IF THIS^.Error THEN
+        <ST><![CDATA[IF THIS^.Feedback.Error THEN
 	THIS^.fbFeedback.LastCommandAccepted	:= FALSE;
 	//Error active/not ready
 

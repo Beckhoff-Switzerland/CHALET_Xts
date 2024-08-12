@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Group" Id="{3aa79aea-eed3-48e5-9919-147a82f1dcae}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Group  EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XTS_Group  EXTENDS I_CH_Object
  ]]></Declaration>
     <Method Name="AddAxisListToGroup" Id="{14ba38af-55d1-438e-87b3-bcb9deeb2c08}">
       <Declaration><![CDATA[METHOD AddAxisListToGroup : HRESULT

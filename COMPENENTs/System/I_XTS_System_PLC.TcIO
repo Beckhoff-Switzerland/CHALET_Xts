@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_System_PLC" Id="{c2d7fecd-f43b-4292-9dd8-14c2a0244331}">
-    <Declaration><![CDATA[INTERFACE I_XTS_System_PLC
+    <Declaration><![CDATA[INTERFACE I_XTS_System_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Method Name="Disable" Id="{1f8631e7-ee4f-4b12-920e-3d4694733782}">
       <Declaration><![CDATA[METHOD Disable : I_CH_Feedback

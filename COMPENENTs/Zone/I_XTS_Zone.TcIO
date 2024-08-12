@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Zone" Id="{7db45b8a-5aa8-4316-9d97-1aa8803c6e23}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Zone
+    <Declaration><![CDATA[INTERFACE I_XTS_Zone  EXTENDS I_CH_Object
 ]]></Declaration>
     <Property Name="CtsMoversInZone" Id="{aa453e36-2a5f-46e9-9e39-4fa51ee10237}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}

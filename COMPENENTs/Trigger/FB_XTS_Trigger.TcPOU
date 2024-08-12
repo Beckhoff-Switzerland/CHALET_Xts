@@ -37,10 +37,13 @@ VAR_INPUT
 	ipXtsSystem : I_XTS_System_Registration; //Interface to XTS system object
 	
 END_VAR
-]]></Declaration>
+VAR_INST
+	{attribute 'hide'}
+	bFBInitCalledOnce : BOOL; //Do the following code once during start up and not during onlinechange
+END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[//Do the following code only during start up and not during onlinechange
-IF bInitRetains THEN 
+        <ST><![CDATA[//Do the following code once during start up and not during onlinechange
+IF NOT bFBInitCalledOnce THEN 
 	;
 END_IF
 
@@ -49,6 +52,8 @@ IF ipXtsSystem <> 0 AND THIS^.ipXtsSystem = 0 THEN
 	ipXtsSystem.RegisterTrigger(THIS^);
 	THIS^.ipXtsSystem := ipXtsSystem;
 END_IF
+
+bFBInitCalledOnce := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
@@ -191,10 +196,10 @@ IF nLastUpdatedCycleCount <> TwinCAT_SystemInfoVarList._TaskInfo[THIS^.nTaskInde
 			
 			
 			//Test if the the Mover was in Trigger-100mm Range(without exact the trigger point) and is now in Trigger+100 Range(with exact the trigger point)
-			bMoverWasInRangePos	:= FUN_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverLastPos, fMaximum:=fRangePositive) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
-			bMoverWasInRangeNeg	:= FUN_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverLastPos, fMaximum:=THIS^.fTriggerPositionOnTrack) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
-			bMoverIsInRangePos 	:= FUN_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverActPos, fMaximum:=fRangePositive); 
-			bMoverIsInRangeNeg 	:= FUN_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverActPos, fMaximum:=THIS^.fTriggerPositionOnTrack); 
+			bMoverWasInRangePos	:= F_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverLastPos, fMaximum:=fRangePositive) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
+			bMoverWasInRangeNeg	:= F_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverLastPos, fMaximum:=THIS^.fTriggerPositionOnTrack) AND NOT (fMoverLastPos=THIS^.fTriggerPositionOnTrack); 
+			bMoverIsInRangePos 	:= F_InLimitTest(fMinimum :=THIS^.fTriggerPositionOnTrack, fInput:= fMoverActPos, fMaximum:=fRangePositive); 
+			bMoverIsInRangeNeg 	:= F_InLimitTest(fMinimum :=fRangeNegative, fInput:= fMoverActPos, fMaximum:=THIS^.fTriggerPositionOnTrack); 
 		
 			IF eTriggerDirection = MC_Positive_Direction AND bMoverWasInRangeNeg AND bMoverIsInRangePos THEN
 				THIS^.ipMoverAtTrigger := aMoversInterfaceLastCycle[nLoopIndex];

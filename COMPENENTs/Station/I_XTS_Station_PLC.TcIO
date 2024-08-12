@@ -1,16 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Station_PLC" Id="{daddfa80-c9fa-4c49-900c-a6fb951bb190}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Station_PLC
+    <Declaration><![CDATA[INTERFACE I_XTS_Station_PLC EXTENDS I_CH_Object
 ]]></Declaration>
     <Folder Name="Simulation" Id="{789658cf-b705-40c0-94f0-535859f81ba3}" />
-    <Property Name="AreMoversInPlace" Id="{d140a936-d829-49d6-b510-6e1536fc5359}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY AreMoversInPlace : BOOL]]></Declaration>
-      <Get Name="Get" Id="{7d5cf4eb-009d-4b41-8186-3dfeb57b0212}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Method Name="ChangePos" Id="{8f1bbf6f-89e4-46fa-b5f9-5fd8a664821c}">
       <Declaration><![CDATA[METHOD ChangePos : HRESULT
 VAR_INPUT
@@ -18,6 +11,14 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Property Name="FullAccess" Id="{45e62743-3387-478b-9a60-985dc203b931}">
+      <Declaration><![CDATA[(*The _ PLC interface provides the user with a simplified interface for commanding between the stations. Sometimes, however, this is not enough. 
+Either you get the corresponding interface with the __Queryinterface or you can get full access with this property.*)
+PROPERTY FullAccess : I_XTS_Station]]></Declaration>
+      <Get Name="Get" Id="{61c8deea-134e-4df0-8bd7-1c4b66b48426}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="LUID" Id="{f51ef214-629a-4fbd-a29d-a1e604692fad}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY LUID : STRING]]></Declaration>
@@ -35,10 +36,35 @@ PROPERTY MoverQueueSize : UINT]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
+    <Property Name="MoversInPlace" Id="{d140a936-d829-49d6-b510-6e1536fc5359}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInPlace : BOOL]]></Declaration>
+      <Get Name="Get" Id="{7d5cf4eb-009d-4b41-8186-3dfeb57b0212}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="MoversInQueue" Id="{bfdaff81-6320-4707-9ee0-4fc7d9e27b60}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF I_XTS_Mover_PLC // Return a sorted list of movers in this zone. Index 0 is the mover in Front.]]></Declaration>
       <Get Name="Get" Id="{bfd8e5b5-9dd9-4b9e-bfa4-82fa0fc4a9ef}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="MoverVelocityAtExit" Id="{f2944c40-39e9-4526-a477-ab0d4da33829}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoverVelocityAtExit : LREAL //[mm/s] Every mover that leaves or passes the station gets this new velocity as a target.
+]]></Declaration>
+      <Get Name="Get" Id="{d2dce039-d70a-4e7e-abc5-5079a4396125}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{55c83297-a46f-4fae-a9ad-25b99775423e}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Set>
+    </Property>
+    <Property Name="PositionOnTrack" Id="{895a03a0-b6dd-44ba-9c3d-0b0fc2c8cace}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY PositionOnTrack : LREAL]]></Declaration>
+      <Get Name="Get" Id="{dfb11930-293d-4ada-810b-2fd784122e2f}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
@@ -87,17 +113,26 @@ PROPERTY SuppressDynamicsChange : BOOL]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
-    <Property Name="TargetPosMonitoringTime" Id="{aad9dd19-dfff-4442-9737-4cd9093e85af}">
+    <Property Name="TargetPosMonitoringTime" Id="{8424cad3-fafb-429e-9a48-80b6febb946d}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY TargetPosMonitoringTime : Time]]></Declaration>
-      <Set Name="Set" Id="{038ff940-ba96-4eff-a0d2-23771b08122b}">
+//A time that is waited as soon as the mover is in the station (including the monitoring window) before “MoversInPlace” is set. e.g. used to stabilize the workpiece
+PROPERTY TargetPosMonitoringTime : TIME]]></Declaration>
+      <Get Name="Get" Id="{b356251f-51a7-4e5d-b49b-5c8e96965fca}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{711c14cf-2709-4fcf-81e6-bfa70f785a21}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
-    <Property Name="TargetPosWindow" Id="{f3cd33d4-7f8a-4fcc-9092-a2b9be73c9e5}">
+    <Property Name="TargetPosWindow" Id="{7278d6f6-3c30-4905-8b4f-d7802dfba026}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//How many mm before the mover reaches the position is “MoversInPlace” set for the process. 
+//This distance can also be set very large (e.g. 100mm) for moving past without stopping.
 PROPERTY TargetPosWindow : LREAL]]></Declaration>
-      <Set Name="Set" Id="{9aaa2553-af51-4905-972f-22e123dcac7d}">
+      <Get Name="Get" Id="{5ae39e46-8d6c-4690-b782-2e57cbaa6746}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+      <Set Name="Set" Id="{36589e9d-82c1-4d40-a94c-36f20fc410b3}">
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>

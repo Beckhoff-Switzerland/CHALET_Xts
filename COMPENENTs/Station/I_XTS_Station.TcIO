@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <Itf Name="I_XTS_Station" Id="{93173e7e-5f1f-41b7-9cae-ddf1ef2d2fc7}">
-    <Declaration><![CDATA[INTERFACE I_XTS_Station  EXTENDS __SYSTEM.IQueryInterface
+    <Declaration><![CDATA[INTERFACE I_XTS_Station EXTENDS I_CH_Object
 ]]></Declaration>
     <Method Name="AddMoverToQueue" Id="{dcf69248-1849-4ab5-a6f1-55dec9788659}">
       <Declaration><![CDATA[METHOD AddMoverToQueue : HRESULT
@@ -10,13 +10,6 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="AreMoversInPlace" Id="{6c2732a7-171c-473e-9dce-c93b33167f6b}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY AreMoversInPlace : BOOL]]></Declaration>
-      <Get Name="Get" Id="{37404813-753d-4c2e-a168-46ee3e8d956c}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
     <Property Name="CtsEmptySpaceInQueue" Id="{80790399-3f9b-44a8-a885-28b318172fd5}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY CtsEmptySpaceInQueue : UDINT]]></Declaration>
@@ -71,6 +64,13 @@ PROPERTY MoverQueueSize : UINT]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Set>
     </Property>
+    <Property Name="MoversInPlace" Id="{6c2732a7-171c-473e-9dce-c93b33167f6b}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY MoversInPlace : BOOL]]></Declaration>
+      <Get Name="Get" Id="{37404813-753d-4c2e-a168-46ee3e8d956c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="MoversInQueue" Id="{72fa1f99-2d88-4fc8-a44a-15ceaadbab8d}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoversInQueue : REFERENCE TO ARRAY [0..(XtsParameterlist.MAX_MOVER_PER_SYSTEM-1)] OF I_XTS_Mover_PLC // Return a sorted list of movers in this zone. Index 0 is the mover in Front.]]></Declaration>
@@ -112,16 +112,9 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Property Name="StationGroupID" Id="{c301c423-1987-498f-aba9-5c4eeb18167d}">
+    <Property Name="StationsAhead" Id="{e35d3ecc-e3ff-4c39-a35b-bf61781b13ea}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY StationGroupID : String]]></Declaration>
-      <Get Name="Get" Id="{73cc5267-23a9-44b1-a793-bd80e00689da}">
-        <Declaration><![CDATA[]]></Declaration>
-      </Get>
-    </Property>
-    <Property Name="StationInFront" Id="{e35d3ecc-e3ff-4c39-a35b-bf61781b13ea}">
-      <Declaration><![CDATA[{attribute 'monitoring':='call'}
-PROPERTY StationInFront : I_XTS_Station]]></Declaration>
+PROPERTY StationsAhead : I_XTS_Station]]></Declaration>
       <Get Name="Get" Id="{4442a0a4-c536-4116-bceb-a54a7d579086}">
         <Declaration><![CDATA[]]></Declaration>
       </Get>
