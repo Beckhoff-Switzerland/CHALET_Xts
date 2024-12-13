@@ -1,0 +1,605 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_LubricationXTS" Id="{9ce8d8d8-8be6-4831-b728-6794b748e058}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LubricationXTS
+
+VAR_INPUT	
+	SysType:				E_SystemType;				//System type BekaPico or SkfETP2WZ
+	LubMode:				E_LubricationMode;			//Lubrication Mode
+	
+	Execute:				BOOL;						//Triggers the function block with rising edge
+	
+	LubAmount:				LREAL;						//Amount of lubricant in ml/d/m/feedline(guidline is 0.21 ml at 1 m/s average velocity) or ml/100.000m/m/feedline (guidline is 0.25 ml at 1 m/s average velocity)
+	
+	FeedlineGap:			LREAL;						//Shortest distance between to feedlines in m (3 m is recommended max. / keep evenly spaced distances between feedlines)
+	NumFeedlines:			INT;						//Number of feed lines linked to the lubrication system	(max. is 8 lines)
+	OutletDosing:			LREAL;						//Amount of lubrication for single outlet in ml/round (guidline is 0.01 ml or 0.005 ml / use same outlet type for each feedline!)
+END_VAR
+
+VAR_IN_OUT
+	XTSUnitRef:				I_XtsUnit//FB_XtsUnit;					//Refrence to XTSUnit
+END_VAR
+
+VAR_OUTPUT
+	Busy:					BOOL;						//Shows if pumping sequence /stroke is started
+	Active:					BOOL;						//Shows if function block is running
+	Error:					BOOL;						//Shows if error has occured
+	ErrorId:				UDINT;						//Gives respective error id
+END_VAR
+
+VAR
+	//Inputs
+	eSysType:				E_SystemType;
+	eLubMode:				E_LubricationMode;
+	bExecute:				BOOL;
+	fLubAmount:				LREAL;
+	fFeedlineGap:			LREAL;
+	nNumFeedlines:			INT;
+	fOutletDosing:			LREAL;
+
+	//Trigger
+	fbExecuteRTrig:			R_Trig;
+	fbExecuteFTrig:			F_Trig;
+	
+	
+	nFbState:				INT;
+	
+	nStrokesPerDay:			INT;
+	tPauseTime:				TIME;
+	
+	fMaxDistanceDriven:		LREAL;
+	fMaxDistanceDrivenTemp:	LREAL;
+	fTriggerDistance:		LREAL;
+	
+	I:						INT;
+	
+	nOperationMode: 		INT;
+	nRunningMode: 			INT;
+	
+	nNumMover:				DINT;
+	nMoverIndex: 			DINT;
+	
+	fbTON:					TON;
+	fbStrokeFTrig:			F_Trig;
+	bStrokeDone:			BOOL;			
+	
+	ObLubOn AT %Q*:			BOOL;
+	IbLubDone 	AT %I*:		BOOL;
+	IbLubFull AT %I*:		BOOL;
+	
+	//XTS Unit
+	
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//ENGINEERING-SAMPLE!!!
+//This FB is an engineering-sample for the control of the recommended lubrication system. Use on own risk!
+
+
+//Checks if lubrication is enabled
+fbExecuteRTrig(CLK:=Execute);
+fbExecuteFTrig(CLK:=Execute);
+
+//With rising edge of excecute
+IF fbExecuteRTrig.Q THEN
+	
+	//Update intern variables
+	eSysType:=SysType;
+	eLubMode:=LubMode;
+	
+	bExecute:=Execute;
+	
+	fLubAmount:=LubAmount;
+	
+	fFeedlineGap:=FeedlineGap;
+	nNumFeedlines:=NumFeedlines;
+	fOutletDosing:=OutletDosing;
+	
+	//Switch state
+	nFbState:=1;
+	nOperationMode:=1;
+	nRunningMode:=1;
+		
+	//Set status
+	Active:=TRUE;
+
+//With falling edge of execute
+ELSIF fbExecuteFTrig.Q THEN
+	
+	//Switch state
+	nFbState:=0;
+	nOperationMode:=0;
+	nRunningMode:=0;
+	
+	//Reset
+	fbTon(In:=FALSE);
+	fMaxDistanceDrivenTemp:=0;
+	fMaxDistanceDriven:=0;
+	nMoverIndex:=1;
+	obLubOn:=FALSE;
+	bStrokeDone:=FALSE;
+	fbStrokeFTrig(Clk:=TRUE);
+	
+	//Set status
+	Active:=FALSE;
+	Busy:=FALSE;
+	Error:=FALSE;
+	ErrorId:=0;
+END_IF
+
+
+CASE nFbState OF
+	0: //Idle
+	
+	1:	//Execute
+
+		//Check which lubrication system is used in the application
+		CASE eSysType OF
+			
+			0: //BekaPico
+				CASE nOperationMode OF
+					
+					0: //Idle
+						
+					1: 	//Calculate data and set mode
+						IF eLubMode=0 THEN
+							
+							IF fOutletDosing > 0 AND fLubAmount >= 0 AND fFeedlineGap > 0 THEN
+								nStrokesPerDay:=LREAL_TO_INT((fLubAmount*fFeedlineGap)/fOutletDosing);
+								tPauseTime:=LREAL_TO_TIME(((1000*60*60*24)-(4000*nStrokesPerDay))/nStrokesPerDay);
+								
+							ELSE
+								Active:=FALSE;
+									
+								Error:=TRUE;
+								ErrorId:=16#0003;
+								//{error 'Wrong input values for FB'}
+							
+								nRunningMode:=0;
+								nOperationMode:=0;
+								nFbState:=0;
+							END_IF
+							
+							nOperationMode:=2;
+						
+						ELSIF eLubMode=1 THEN
+							
+							IF fOutletDosing > 0 AND fLubAmount >= 0 AND fFeedlineGap > 0 THEN
+								fTriggerDistance:=100000000*(fOutletDosing/(fLubAmount*fFeedlineGap));
+								fMaxDistanceDrivenTemp:=0;
+
+							ELSE
+								Active:=FALSE;
+									
+								Error:=TRUE;
+								ErrorId:=16#0003;
+							
+								nRunningMode:=0;
+								nOperationMode:=0;
+								nFbState:=0;
+							END_IF
+						
+							nOperationMode:=3;
+						
+						ELSIF eLubMode=2 THEN
+							
+							nOperationMode:=4;
+						ELSE
+							Active:=FALSE;
+									
+							Error:=TRUE;
+							ErrorId:=16#0003;
+						
+							nRunningMode:=0;
+							nOperationMode:=0;
+							nFbState:=0;
+						END_IF
+						
+					
+					2: //Lubrication running in time based mode
+						CASE nRunningMode OF
+							0: //Idle
+							
+							
+							1: //Check if Pump is full
+								IF NOT IbLubFull THEN
+									Active:=FALSE;
+									
+									Error:=TRUE;
+									ErrorId:=16#0002;
+								
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;	
+							
+								ELSE	
+									nRunningMode:=2;
+								END_IF
+								
+							2: //Pumping (1 cycle = 1 OutletDosing per Feedline)
+								Busy:=TRUE;
+								ObLubOn:=TRUE;
+								
+								fbTON(IN:=TRUE,PT:=T#5S);	
+							
+								IF 	fbTON.ET > T#2S  AND NOT IbLubDone  THEN
+									fbTON(IN:=FALSE);
+									
+									ObLubOn:=FALSE;
+									Busy:=FALSE;
+	
+									nRunningMode:=3;
+									
+								ELSIF (fbTon.Q AND IbLubDone) OR (fbTON.ET > T#1S AND NOT IbLubDone) THEN
+									fbTON(IN:=FALSE);
+									ObLubOn:=FALSE;
+									
+									Busy:=FALSE;
+									Active:=FALSE;
+									Error:=TRUE;
+									ErrorId:=16#0001;
+									
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;		
+								END_IF
+						
+							3: //Waiting (calculated waiting time)
+								fbTON(IN:=TRUE,PT:=tPauseTime);
+								
+								IF fbTON.Q THEN
+									fbTON(IN:=FALSE);
+									
+									nRunningMode:=1;
+								END_IF
+								
+						END_CASE
+	
+					3: //Lubrication running in distance based mode
+						
+						CASE nRunningMode OF
+							0: //Idle
+							
+							
+							1: //Check if Pump is full
+								IF NOT IbLubFull THEN
+									Active:=FALSE;
+									
+									Error:=TRUE;
+									ErrorId:=16#0002;
+								
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;	
+							
+								ELSE	
+									nRunningMode:=2;
+								END_IF
+								
+								
+							2: //Pumping (1 cycle = 1 OutletDosing per Feedline)
+								Busy:=TRUE;
+								ObLubOn:=TRUE;
+								
+								fbTON(IN:=TRUE,PT:=T#5S);	
+							
+								IF 	fbTON.ET > T#1S  AND NOT IbLubDone  THEN
+									fbTON(IN:=FALSE);
+									
+									ObLubOn:=FALSE;
+									Busy:=FALSE;
+	
+									nRunningMode:=3;
+									
+								ELSIF (fbTon.Q AND IbLubDone) OR (fbTON.ET > T#1S AND NOT IbLubDone) THEN
+									fbTON(IN:=FALSE);
+									ObLubOn:=FALSE;
+									
+									Busy:=FALSE;
+									Active:=FALSE;
+									Error:=TRUE;
+									ErrorId:=16#0001;
+									
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;		
+								END_IF
+								
+								
+							3: //Check how far movers have moved
+								FOR nNumMover:= 1 TO XTSUnitRef.stXtsUnit.stMotion.nAxisCount DO
+								
+									IF XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nNumMover].stParameter.fDistanceDriven > fMaxDistanceDriven THEN
+										fMaxDistanceDriven:= XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nNumMover].stParameter.fDistanceDriven;
+										nMoverIndex:=nNumMover;
+									END_IF
+									
+								END_FOR	
+								
+								fMaxDistanceDriven:=fMaxDistanceDriven-fMaxDistanceDrivenTemp;
+								
+								IF fMaxDistanceDriven >= fTriggerdistance THEN
+									fMaxDistanceDrivenTemp:=XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nMoverIndex].stParameter.fDistanceDriven;
+									
+									nRunningMode:=1;
+								END_IF
+								
+						END_CASE
+			
+					4: //Lubrication running in continous mode
+					
+						CASE nRunningMode OF
+							0: //Idle
+						
+							1: //Pumping continous
+								IF NOT IbLubFull THEN
+									Active:=FALSE;
+									
+									Error:=TRUE;
+									ErrorId:=16#0002;
+								
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;
+									
+								ELSE	
+									Busy:=TRUE;
+									ObLubOn:=TRUE;
+									
+									fbTON(IN:=TRUE,PT:=T#5S);
+									
+									fbStrokeFTrig(Clk:=IbLubDone);
+									
+									IF fbStrokeFTrig.Q THEN
+										bStrokeDone:=TRUE;
+									END_IF
+									
+									IF 	fbTON.Q  AND NOT bStrokeDone THEN
+										fbTON(IN:=FALSE);
+										ObLubOn:=FALSE;
+										
+										Busy:=FALSE;
+										Active:=FALSE;
+										Error:=TRUE;
+										ErrorId:=16#0001;
+										
+										nRunningMode:=0;
+										nOperationMode:=0;
+										nFbState:=0;
+										
+									ELSIF  bStrokeDone THEN
+										fbTON(IN:=FALSE);
+										bStrokeDone:=FALSE;
+									END_IF
+								
+								END_IF
+							
+						END_CASE	
+					
+				END_CASE			
+			
+			1: //SkfETP2WZ
+				CASE nOperationMode OF
+					
+					0: //Idle
+						
+					1: 	//Calculate data and set mode
+						IF eLubMode=0 THEN
+							
+							IF fOutletDosing > 0 AND fLubAmount >= 0 AND fFeedlineGap > 0 THEN
+								nStrokesPerDay:=LREAL_TO_INT((fLubAmount*fFeedlineGap)/fOutletDosing);
+								tPauseTime:=LREAL_TO_TIME(((1000*60*60*24)-(420000*nStrokesPerDay))/nStrokesPerDay);
+								
+								IF tPauseTime < T#30M THEN
+									tPauseTime:= T#30M;
+								END_IF 
+								
+							ELSE
+								Active:=FALSE;
+									
+								Error:=TRUE;
+								ErrorId:=16#0003;
+								//{error 'Wrong input values for FB'}
+							
+								nRunningMode:=0;
+								nOperationMode:=0;
+								nFbState:=0;
+							END_IF
+							
+							nOperationMode:=2;
+						
+						ELSIF eLubMode=1 THEN
+							
+							IF fOutletDosing > 0 AND fLubAmount >= 0 AND fFeedlineGap > 0 THEN
+								fTriggerDistance:=fOutletDosing/(fLubAmount*fFeedlineGap);
+								fMaxDistanceDrivenTemp:=0;
+
+							ELSE
+								Active:=FALSE;
+									
+								Error:=TRUE;
+								ErrorId:=16#0003;
+							
+								nRunningMode:=0;
+								nOperationMode:=0;
+								nFbState:=0;
+							END_IF
+						
+							nOperationMode:=3;
+						
+						ELSIF eLubMode=2 THEN
+							
+							nOperationMode:=4;
+						ELSE
+							Active:=FALSE;
+									
+							Error:=TRUE;
+							ErrorId:=16#0003;
+						
+							nRunningMode:=0;
+							nOperationMode:=0;
+							nFbState:=0;
+						END_IF
+						
+					
+					2: //Lubrication running in time based mode
+						CASE nRunningMode OF
+							0: //Idle
+							
+							
+							1: //Check if Pump is full
+								nRunningMode:=2;
+								
+							2: //Pumping (1 cycle = 1 OutletDosing per Feedline)
+								Busy:=TRUE;
+								ObLubOn:=TRUE;
+								
+								fbTON(IN:=TRUE,PT:=T#7M);	
+							
+								IF 	fbTON.ET >= T#7M  AND IbLubDone THEN
+									fbTON(IN:=FALSE);
+									
+									ObLubOn:=FALSE;
+									Busy:=FALSE;
+	
+									nRunningMode:=3;
+									
+								ELSIF fbTon.Q AND NOT IbLubDone THEN
+									fbTON(IN:=FALSE);
+									ObLubOn:=FALSE;
+									
+									Busy:=FALSE;
+									Active:=FALSE;
+									Error:=TRUE;
+									ErrorId:=16#0001;
+									
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;		
+								END_IF
+						
+							3: //Waiting (calculated waiting time)
+								fbTON(IN:=TRUE,PT:=tPauseTime);
+								
+								IF fbTON.Q THEN
+									fbTON(IN:=FALSE);
+									
+									nRunningMode:=1;
+								END_IF
+								
+						END_CASE
+	
+					3: //Lubrication running in distance based mode
+						
+						CASE nRunningMode OF
+							0: //Idle
+							
+							
+							1: //Check if Pump is full	
+								nRunningMode:=2;			
+								
+							2: //Pumping (1 cycle = 1 OutletDosing per Feedline)
+								Busy:=TRUE;
+								ObLubOn:=TRUE;
+								
+								fbTON(IN:=TRUE,PT:=T#7M);	
+							
+								IF 	fbTON.ET > T#7M  AND IbLubDone  THEN
+									fbTON(IN:=FALSE);
+									
+									ObLubOn:=FALSE;
+									Busy:=FALSE;
+	
+									nRunningMode:=3;
+									
+								ELSIF fbTon.Q AND NOT IbLubDone THEN
+									fbTON(IN:=FALSE);
+									ObLubOn:=FALSE;
+									
+									Busy:=FALSE;
+									Active:=FALSE;
+									Error:=TRUE;
+									ErrorId:=16#0001;
+									
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;		
+								END_IF
+								
+								
+							3: //Check how far movers have moved
+								fbTON(IN:=TRUE,PT:=tPauseTime);
+							
+								FOR nNumMover:= 1 TO XTSUnitRef.stXtsUnit.stMotion.nAxisCount DO
+								
+									IF XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nNumMover].stParameter.fDistanceDriven > fMaxDistanceDriven THEN
+										fMaxDistanceDriven:= XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nNumMover].stParameter.fDistanceDriven;
+										nMoverIndex:=nNumMover;
+									END_IF
+									
+								END_FOR	
+								
+								fMaxDistanceDriven:=fMaxDistanceDriven-fMaxDistanceDrivenTemp;
+								
+								IF fMaxDistanceDriven >= fTriggerdistance AND fbTon.Q THEN
+									fMaxDistanceDrivenTemp:=XTSUnitRef.stXtsUnit.stTcIoXtsDrv.stMover[nMoverIndex].stParameter.fDistanceDriven;
+									
+									fbTon(In:=FALSE);
+									nRunningMode:=1;
+								END_IF
+										
+						END_CASE
+			
+					4: //Lubrication running in continous mode
+					
+						CASE nRunningMode OF
+							0: //Idle
+							
+							1: //Pumping (continous)	
+								Busy:=TRUE;
+								ObLubOn:=TRUE;
+								
+								fbTON(IN:=TRUE,PT:=T#7M);							
+								
+								IF 	fbTON.ET >= T#7M  AND IbLubDone THEN
+									fbTON(IN:=FALSE);
+									
+									ObLubOn:=FALSE;
+									Busy:=FALSE;
+		
+									nRunningMode:=2;
+									
+								ELSIF fbTon.Q AND NOT IbLubDone THEN
+									fbTON(IN:=FALSE);
+									ObLubOn:=FALSE;
+									
+									Busy:=FALSE;
+									Active:=FALSE;
+									Error:=TRUE;
+									ErrorId:=16#0001;
+									
+									nRunningMode:=0;
+									nOperationMode:=0;
+									nFbState:=0;		
+								END_IF
+							
+							2: //Waiting (calculated waiting time)
+								fbTON(IN:=TRUE,PT:=tPauseTime);
+								
+								IF fbTON.Q THEN
+									fbTON(IN:=FALSE);
+									
+									nRunningMode:=1;
+								END_IF
+						
+						END_CASE
+				
+				END_CASE
+				
+		END_CASE	
+				
+END_CASE]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

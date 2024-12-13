@@ -6,6 +6,7 @@ FUNCTION_BLOCK FB_XTS_Station EXTENDS FB_CH_Object IMPLEMENTS I_XTS_Station, I_X
 VAR
 	{attribute 'hide'}
 	bInitDone : BOOL;
+	{attribute 'hide'}
 	bErrorDuringFbInit : BOOL; // Not possible to reset
 	{attribute 'hide'}
 	ipXtsSystem 				: I_XTS_System_Registration;
@@ -42,6 +43,8 @@ VAR
 	OIDStationInfo : OTCID; //OID of XtsStationInfo object to visualize in Viewer. 0 if not used.
 	{attribute 'hide'}
 	ipStationInfo : I_TcIoXtsInfoServerInfoStation;
+	{attribute 'hide'}
+	bUtilityStationInitDone : BOOL;
 	
 	//Simulation
 	{attribute 'hide'}
@@ -64,6 +67,9 @@ END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[]]></ST>
     </Implementation>
+    <Folder Name="Enabling" Id="{e6c295f3-7f5f-4110-9b8a-d6ca43c039f0}">
+      <Folder Name="Subobject" Id="{f1383c1c-9090-48e7-8744-26a97250ac35}" />
+    </Folder>
     <Folder Name="Interaction with process" Id="{5d242633-9b66-4eba-83a0-bac9d9b6bfed}" />
     <Folder Name="Simulation" Id="{25563c86-7664-43c8-8b7e-06f03c783680}" />
     <Folder Name="Statistic" Id="{d6e1880e-9bfe-43c6-b777-4e8ddc68300c}" />
@@ -99,18 +105,58 @@ END_IF
 VAR_INPUT
 	fNewPosOnTrack : LREAL;
 END_VAR
+VAR
+	ipEachMoverInStation : I_XTS_Mover;
+	fGapToFirstMoverInQueue, fTargedPos : LREAL;
+	nIdx : UDINT;
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[// new Position not allowed
-IF fNewPosOnTrack <= THIS^.StationBehinde.PositionOnTrack OR 
-   fNewPosOnTrack >= THIS^.StationsAhead.PositionOnTrack THEN
-	// failed
-	ChangePos := E_FAIL;
-	RETURN;
-END_IF
+        <ST><![CDATA[THIS^.fbFeedback.ActiveCommand := 'ChangePos';
+THIS^.fbFeedback.Busy := TRUE;
 
-// change position when Station is empty
-IF NOT THIS^.MoversInPlace THEN
+// Only small changes during system is enabled
+IF THIS^.ipXtsSystem.Enabled THEN	
+	
+	IF fNewPosOnTrack = THIS^.PositionOnTrack THEN
+		// failed - same pos
+		ChangePos := S_FALSE;
+		THIS^.fbFeedback.HR := ChangePos;
+		RETURN;
+	END_IF	
+
+
+	// new Position not allowed
+	IF fNewPosOnTrack > THIS^.fTrackLentgh THEN
+		// failed
+		ChangePos := E_FAIL;
+		THIS^.fbFeedback.HR := ChangePos;
+		RETURN;
+	END_IF	
+	IF fNewPosOnTrack < 0 THEN
+		// failed
+		ChangePos := E_FAIL;
+		THIS^.fbFeedback.HR := ChangePos;
+		RETURN;
+	END_IF	
+	
+	
+	IF THIS^.StationBehinde <> 0 AND_THEN fNewPosOnTrack <= THIS^.StationBehinde.PositionOnTrack THEN
+		// failed
+		ChangePos := E_FAIL;
+		THIS^.fbFeedback.HR := ChangePos;
+		RETURN;
+	END_IF
+	IF THIS^.StationsAhead <> 0 AND_THEN fNewPosOnTrack >= THIS^.StationsAhead.PositionOnTrack THEN
+		// failed
+		ChangePos := E_FAIL;
+		THIS^.fbFeedback.HR := ChangePos;
+		RETURN;
+	END_IF
+
+	
+	
+
 	THIS^.fPositionOnTrack := fNewPosOnTrack;
 	
 	fbTrigger.PositionOnTrack := THIS^.fPositionOnTrack;
@@ -120,11 +166,210 @@ IF NOT THIS^.MoversInPlace THEN
 	//The zone window is the full system, with one small exception, a window of 0.001mm after the end.  Start and end must not be identical
 	fbSortedListMoversInQueue.StartPositionOnTrack := LMOD(lr_Value:=(fbSortedListMoversInQueue.EndPositionOnTrack  + 0.0001), lr_Arg:= THIS^.fTrackLentgh); 
 	
+	//Redo drawing of station is visu
+	THIS^.bUtilityStationInitDone := FALSE;
+	
+	//Send all movers in this station to new position
+	FOR nIdx := 0 TO (XtsParameterlist.MAX_MOVER_PER_SYSTEM-1) DO
+		IF ToMover(THIS^.MoversInQueue[nIdx], ipEachMoverInStation) THEN 	
+			fTargedPos := fNewPosOnTrack - fGapToFirstMoverInQueue;
+			IF fTargedPos < 0 THEN
+				fTargedPos := fTargedPos + THIS^.fTrackLentgh;
+			END_IF
+			ipEachMoverInStation.MoveAbsCA(	fPosition := fTargedPos,
+											fVelocity := ipEachMoverInStation.LastCmdTargedVelocity,
+											fGap	  := ipEachMoverInStation.LastCmdTargedGap,
+											eDirection:= Tc3_Mc3Definitions.MC_DIRECTION.mcDirectionShortestWay	);
+											
+			fGapToFirstMoverInQueue := fGapToFirstMoverInQueue + ipEachMoverInStation.LastCmdTargedGap;
+
+		ELSE
+			EXIT;			
+		END_IF
+	END_FOR
+	
+	
 	ChangePos := S_OK;
-ELSE
-	// wait untli station is empty
-	ChangePos := S_FALSE;
-END_IF]]></ST>
+
+
+	
+// If disabled its allowed to move to any position
+ELSIF THIS^.ipXtsSystem.Disabled THEN
+	THIS^.fPositionOnTrack := fNewPosOnTrack;
+	ChangePos := S_OK;
+	
+	
+	
+// During disabling or enabling its not allowed to move the position	
+ELSE 
+	ChangePos := E_FAIL;;	
+END_IF
+
+THIS^.fbFeedback.HR := ChangePos;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CheckForStationsSameName" Id="{230bd660-d627-4f3c-90ad-8710765c6e59}" FolderPath="Enabling\Subobject\">
+      <Declaration><![CDATA[METHOD PROTECTED CheckForStationsSameName : HRESULT
+VAR
+	fbStationsToCheck : CHALET_BaseComponents.FB_CH_List;
+	ipStationToCheck : I_XTS_Station;
+END_VAR
+VAR_INST
+	{attribute 'hide'}	
+	fbAlarm : FB_TcAlarm;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check for stations on the same position
+fbStationsToCheck.Duplicate(THIS^.ipXtsSystem.Stations);
+
+//Clear alarm
+fbAlarm.Clear(0,0);
+
+//Remove this station from list
+fbStationsToCheck.RemoveObject(THIS^);
+
+// go through the list and search the station in front
+fbStationsToCheck.ResetIterator();
+WHILE fbStationsToCheck.HasNextObject() DO
+	IF ToStation(fbStationsToCheck.GetNextObject(), ipStationToCheck) THEN
+		IF ipStationToCheck.PositionOnTrack = THIS^.PositionOnTrack THEN
+			fbAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.DublicateStationNames, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			fbAlarm.ipArguments.AddStringByValue(THIS^.LUID);
+			fbAlarm.Raise(0);
+			CheckForStationsSameName := E_FAIL;
+			RETURN;
+		END_IF	
+	END_IF
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CheckForStationsSamePos" Id="{070fe2a1-eb05-4b6d-88b4-41c004e7aed9}" FolderPath="Enabling\Subobject\">
+      <Declaration><![CDATA[METHOD PROTECTED CheckForStationsSamePos : HRESULT
+VAR
+	fbStationsToCheck : CHALET_BaseComponents.FB_CH_List;
+	ipStationToCheck : I_XTS_Station;
+END_VAR
+VAR_INST
+	{attribute 'hide'}	
+	fbAlarm : FB_TcAlarm;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Check for stations on the same position
+fbStationsToCheck.Duplicate(THIS^.ipXtsSystem.Stations);
+
+//Clear alarm
+fbAlarm.Clear(0,0);
+
+//Remove this station from list
+fbStationsToCheck.RemoveObject(THIS^);
+
+// go through the list and search the station in front
+fbStationsToCheck.ResetIterator();
+WHILE fbStationsToCheck.HasNextObject() DO
+	IF ToStation(fbStationsToCheck.GetNextObject(), ipStationToCheck) THEN
+		IF ipStationToCheck.PositionOnTrack = THIS^.PositionOnTrack THEN
+			fbAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.DublicateStationPositions, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			fbAlarm.ipArguments.AddStringByValue(THIS^.LUID).AddStringByValue(ipStationToCheck.LUID);
+			fbAlarm.Raise(0);
+			CheckForStationsSamePos := E_FAIL;
+			RETURN;
+		END_IF	
+	END_IF
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Configure" Id="{6ab6b1f4-813e-49e0-999f-b0999d531960}" FolderPath="Enabling\">
+      <Declaration><![CDATA[//Call this Methode whith seq 0->99, and wait each step until S_OK is returned
+METHOD Configure : HRESULT
+VAR_INPUT
+	nSeq : UINT; //0->100
+END_VAR
+VAR
+
+END_VAR
+VAR_INST
+	{attribute 'hide'}	
+	fbInvalideStationPositionAlarm : FB_TcAlarm;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE nSeq OF
+
+	1: // Reset Config-Errors
+		fbInvalideStationPositionAlarm.Clear(0,0);
+		
+
+	2: //Check for valide Data
+		IF 	THIS^.ipXtsSystem = 0 OR 
+			THIS^.ipXtsSystem.Environment = 0 OR
+			THIS^.ipXtsSystem.Stations = 0 THEN
+				Configure := E_FAIL;
+		END_IF	
+			
+	
+	3: //Store some data
+		THIS^.fTrackLentgh := THIS^.ipXtsSystem.TrackLength;
+		IF THIS^.fTrackLentgh <= 0 THEN
+			Configure := E_FAIL;
+		END_IF
+		
+		
+	10: //Station position on track is larger than CA-Group track length
+		IF THIS^.PositionOnTrack > THIS^.fTrackLentgh THEN
+			fbInvalideStationPositionAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.StationPositionLargerAsTrack, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+			fbInvalideStationPositionAlarm.Raise(0);
+			Configure := E_FAIL;
+		END_IF
+
+		
+	20: //Error if two stations have the same LUID
+		Configure := THIS^.CheckForStationsSameName();
+		
+				
+	30: //Error if two stations have the same position on track
+		Configure := THIS^.CheckForStationsSamePos();
+		
+		
+	40: //Get Station in Front
+		Configure := THIS^.GetStationAhead();
+	
+			
+				
+	50: //Get Station in Back
+		Configure := THIS^.GetStationBehinde();
+			
+		
+	60: // Config trigger fb
+		THIS^.fbTrigger.ListOfMoversToCheck := THIS^.ipXtsSystem.Movers;
+		THIS^.fbTrigger.PositionOnTrack := THIS^.PositionOnTrack;
+		THIS^.fbTrigger.TriggerDirection := MC_Positive_Direction;
+		Configure := THIS^.fbTrigger.Initialize();		
+		
+	70: // Config window fb		
+		// Use the zone to sort all movers in this queue depending on the distance to targed in an output array.
+		// Move the zone 10mm forward to make sure, that an Mover who is enabled at x.01mm is still in range
+		fbSortedListMoversInQueue.EndPositionOnTrack := LMOD(lr_Value:=(THIS^.PositionOnTrack + 10.0), lr_Arg:= THIS^.fTrackLentgh); 
+		//The zone window is the full system, with one small exception, a window of 0.001mm after the end.  Start and end must not be identical
+		fbSortedListMoversInQueue.StartPositionOnTrack := LMOD(lr_Value:=(fbSortedListMoversInQueue.EndPositionOnTrack  + 0.0001), lr_Arg:= THIS^.fTrackLentgh); 
+		fbSortedListMoversInQueue.ListOfMoversToCheck := THIS^.fbAssignedMovers;
+		Configure := THIS^.fbSortedListMoversInQueue.Initialize();	
+		
+
+		
+	80: //Redo drawing of station is visu
+		THIS^.bUtilityStationInitDone := FALSE;	
+
+	100..CHALET_BaseComponents.GVL_Datatypes.cMaxUint: 
+		// 100..MaxUint -> Invalide input
+		Configure := E_FAIL;
+		
+	ELSE 
+		//If an step is not defind/used return ok
+		Configure := S_OK;
+END_CASE
+]]></ST>
       </Implementation>
     </Method>
     <Property Name="CtsEmptySpaceInQueue" Id="{3524b89f-cf20-42dd-adc3-106b1a7b5a4d}" FolderPath="Interaction with process\">
@@ -242,6 +487,90 @@ END_VAR
         </Implementation>
       </Get>
     </Property>
+    <Method Name="GetStationAhead" Id="{0dc77708-dac3-4afb-a1c2-de54f6a9769e}" FolderPath="Enabling\Subobject\">
+      <Declaration><![CDATA[METHOD PROTECTED GetStationAhead : HRESULT
+VAR
+	fbStationsToCheck	: CHALET_BaseComponents.FB_CH_List;
+	ipStationToCheck 	: I_XTS_Station;	
+	bTrackIsRing			: BOOL;
+
+	fTempDistBetween 	: LREAL;
+	
+	fFoundDistBetween 	: LREAL := CHALET_BaseComponents.GVL_Datatypes.cMaxLreal;
+	ipFoundStation		: I_XTS_Station;
+END_VAR	]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Clear
+THIS^.ipStationInFront := 0;
+
+//get new lisat of stations
+fbStationsToCheck.Duplicate(THIS^.ipXtsSystem.Stations);
+
+bTrackIsRing := THIS^.ipXtsSystem.Environment.TrackIsRing;
+
+
+//Remove this station from list
+fbStationsToCheck.RemoveObject(THIS^);
+
+// go through the list and search the station in front
+fbStationsToCheck.ResetIterator();
+WHILE fbStationsToCheck.HasNextObject() DO
+	IF ToStation(fbStationsToCheck.GetNextObject(), ipStationToCheck) THEN
+		
+		IF NOT bTrackIsRing AND (ipStationToCheck.PositionOnTrack < THIS^.PositionOnTrack) THEN
+			// Skip this station if behinde and not a closed loop
+			CONTINUE;
+		END_IF
+		
+		// calc distance to position in positive direction
+		fTempDistBetween := F_GetDistToPosModulo(	fActualPosition := THIS^.PositionOnTrack,
+													fTargedPosition := ipStationToCheck.PositionOnTrack, 
+													fModulo := THIS^.fTrackLentgh);
+
+		// check if Station is closer then last one - store
+		IF fFoundDistBetween > fTempDistBetween THEN 
+			fFoundDistBetween := fTempDistBetween;
+			THIS^.ipStationInFront := ipStationToCheck;
+		END_IF
+		
+	END_IF
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="GetStationBehinde" Id="{f557e089-b593-403e-b829-f78d94e2df5b}" FolderPath="Enabling\Subobject\">
+      <Declaration><![CDATA[METHOD PROTECTED GetStationBehinde : HRESULT
+VAR
+	fbStationsToCheck	: CHALET_BaseComponents.FB_CH_List;
+	ipStationToCheck 	: I_XTS_Station;	
+
+END_VAR	]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Clear
+THIS^.ipStationBehinde := 0;
+
+//get new lisat of stations
+fbStationsToCheck.Duplicate(THIS^.ipXtsSystem.Stations);
+
+//Remove this station from list
+fbStationsToCheck.RemoveObject(THIS^);
+
+// go through the list and search the station in front
+fbStationsToCheck.ResetIterator();
+WHILE fbStationsToCheck.HasNextObject() DO
+	IF ToStation(fbStationsToCheck.GetNextObject(), ipStationToCheck) THEN
+		
+		IF ipStationToCheck.StationsAhead.LUID = THIS^.LUID THEN
+			//FOUND
+			THIS^.ipStationBehinde := ipStationToCheck;
+			RETURN;
+		END_IF
+		
+	END_IF
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
     <Property Name="HR" Id="{5e56e9c0-c790-4a4f-926f-4782a3c193b0}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY HR : HRESULT
@@ -260,7 +589,7 @@ END_VAR
 VAR
 	nLoopIndex : UDINT;
 	nNbOfStationsChecked : UDINT;
-	ipThisStation, ipTempStation, ipStationInFrontTemp : I_XTS_Station;
+	//ipThisStation, ipTempStation, ipStationInFrontTemp : I_XTS_Station;
 	bErrorStationInFrontNotFound, bErrorStationBehindeNotFound : BOOL;
 END_VAR
 VAR_INST
@@ -269,11 +598,11 @@ VAR_INST
 	fbInitError : FB_TcAlarm;
 	{attribute 'hide'}	
 	fbMissingInterfaceAlarm : FB_TcAlarm;
-	{attribute 'hide'}	
-	fbInvalideStationPositionAlarm : FB_TcAlarm;
+
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[ipThisStation := (THIS^);
+        <ST><![CDATA[fbFeedback.ActiveCommand := 'Initialize';
+fbFeedback.hr := S_PENDING;	
 
 //Check Error during FB_Init
 IF THIS^.bErrorDuringFbInit THEN
@@ -299,97 +628,36 @@ IF THIS^.ipXtsSystem = 0 THEN
 	RETURN;
 END_IF
 
-//Station position on track is larger than CA-Group track length
-IF THIS^.PositionOnTrack > THIS^.ipXtsSystem.TrackLength THEN
-	IF NOT fbInvalideStationPositionAlarm.bRaised THEN 
-		//This error cannot be reset. Requires a reset cold
-		fbInvalideStationPositionAlarm.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.StationPositionLargerAsTrack, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-		fbInvalideStationPositionAlarm.Raise(0);
-	END_IF
-	Initialize := E_FAIL;
-	THIS^.fbFeedback.HR := Initialize;
-	RETURN;
-END_IF
-
-//New Station in Front found. Befor continous do this for each station.
-ipStationInFrontTemp := THIS^.ipXtsSystem.getStationInFront(THIS^);
-IF ipStationInFrontTemp <> THIS^.ipStationInFront THEN
-	THIS^.ipStationInFront := ipStationInFrontTemp;
-	THIS^.bInitDone := FALSE;
-	Initialize := S_PENDING;
-	THIS^.fbFeedback.HR := Initialize;
-	RETURN;
-END_IF
-
-
-fbFeedback.hr := S_OK;	
 
 IF NOT THIS^.bInitDone THEN
 	
 	THIS^.DeleteMoversQueue();
 
-	THIS^.fTrackLentgh := THIS^.ipXtsSystem.TrackLength;
-	THIS^.ipStationInFront := THIS^.ipXtsSystem.getStationInFront(THIS^);
-	
-	
-	fbTrigger.ListOfMoversToCheck := THIS^.ipXtsSystem.Movers;
-	fbTrigger.PositionOnTrack := THIS^.PositionOnTrack;
-	fbTrigger.TriggerDirection := MC_Positive_Direction;
-	//Init Tigger
-	fbFeedback.hr := GetMostSignificant(S_OK,fbTrigger.Initialize());	
-	
+//	//Validate Settings - Error
+//	bErrorStationInFrontNotFound := ((ipStationInFront = 0) AND THIS^.ipXtsSystem.Environment.TrackIsRing AND (THIS^.ipXtsSystem.Stations.Size > 1));
+//	bErrorStationBehindeNotFound := ((ipStationBehinde = 0) AND THIS^.ipXtsSystem.Environment.TrackIsRing AND (THIS^.ipXtsSystem.Stations.Size > 1));		
+//	IF (bErrorStationInFrontNotFound OR bErrorStationBehindeNotFound OR (THIS^.LUID = '') OR (fTrackLentgh <= 0) OR (fPositionOnTrack < 0.0) OR (fPositionOnTrack >= fTrackLentgh) OR (fMoverVelocityAtExit <= 0) OR (fMoverGapAtExit <= 0)) THEN
+//		fbFeedback.hr := GetMostSignificant(E_FAIL, fbFeedback.hr);	
+//		IF NOT fbInitError.bRaised THEN 
+//			//This error cannot be reset. Requires a reset cold
+//			fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.InitializationInvalideParameter, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+//			fbInitError.Raise(0);
+//		END_IF
+//	END_IF
 
-	//Use the zone to sort all movers in this queue depending on the distance to targed in an output array.
-	//The Zone is set to the length of the whole system, but only add the mover in the station queue.
-	fbFeedback.hr := GetMostSignificant(fbFeedback.hr,fbSortedListMoversInQueue.Initialize());		
-	// Move the zone 10mm forward to make sure, that an Mover who is enabled at x.01mm is still in range
-	fbSortedListMoversInQueue.EndPositionOnTrack := LMOD(lr_Value:=(THIS^.PositionOnTrack + 10.0), lr_Arg:= THIS^.fTrackLentgh); 
-	//The zone window is the full system, with one small exception, a window of 0.001mm after the end.  Start and end must not be identical
-	fbSortedListMoversInQueue.StartPositionOnTrack := LMOD(lr_Value:=(fbSortedListMoversInQueue.EndPositionOnTrack  + 0.0001), lr_Arg:= THIS^.fTrackLentgh); 
-	fbSortedListMoversInQueue.ListOfMoversToCheck := THIS^.fbAssignedMovers;
-	fbFeedback.hr := GetMostSignificant(fbFeedback.hr,fbSortedListMoversInQueue.Initialize());		
-	
-	
-	
-	//Get Station behinde this one.
-	ipTempStation := ipThisStation;
-	nNbOfStationsChecked := 0;
-	WHILE((ipTempStation <> 0) AND_THEN (ipTempStation.StationsAhead <> 0)) DO
-		// test if this is the station behinde
-		IF (ipTempStation.StationsAhead.LUID = THIS^.LUID) THEN
-			THIS^.ipStationBehinde := ipTempStation;	
-			EXIT;	
-		END_IF
-		// get Next Stations
-		ipTempStation := ipTempStation.StationsAhead;
-		nNbOfStationsChecked := nNbOfStationsChecked + 1;
-		
-		//Error, all station checked, not found.
-		IF (ipTempStation = ipThisStation) OR (nNbOfStationsChecked > THIS^.ipXtsSystem.Stations.Size)THEN
-			Initialize := E_FAIL;
-			RETURN;
-		END_IF
-	END_WHILE
-
-		
-	//Validate Settings - Error
-	bErrorStationInFrontNotFound := ((ipStationInFront = 0) AND THIS^.ipXtsSystem.Environment.TrackIsRing AND (THIS^.ipXtsSystem.Stations.Size > 1));
-	bErrorStationBehindeNotFound := ((ipStationBehinde = 0) AND THIS^.ipXtsSystem.Environment.TrackIsRing AND (THIS^.ipXtsSystem.Stations.Size > 1));		
-	IF (bErrorStationInFrontNotFound OR bErrorStationBehindeNotFound OR (THIS^.LUID = '') OR (fTrackLentgh <= 0) OR (fPositionOnTrack < 0.0) OR (fPositionOnTrack >= fTrackLentgh) OR (fMoverVelocityAtExit <= 0) OR (fMoverGapAtExit <= 0)) THEN
-		fbFeedback.hr := GetMostSignificant(E_FAIL, fbFeedback.hr);	
-		IF NOT fbInitError.bRaised THEN 
-			//This error cannot be reset. Requires a reset cold
-			fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.InitializationInvalideParameter, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-			fbInitError.Raise(0);
-		END_IF
-	END_IF
-
-	
-	bInitDone := CheckOk(fbFeedback.hr);
+		THIS^.fbTrigger.ListOfMoversToCheck := THIS^.ipXtsSystem.Movers;
+		THIS^.fbTrigger.PositionOnTrack := THIS^.PositionOnTrack;
+		THIS^.fbTrigger.TriggerDirection := MC_Positive_Direction;
+		fbSortedListMoversInQueue.EndPositionOnTrack := LMOD(lr_Value:=(THIS^.PositionOnTrack + 10.0), lr_Arg:= THIS^.fTrackLentgh); 
+		fbSortedListMoversInQueue.StartPositionOnTrack := LMOD(lr_Value:=(fbSortedListMoversInQueue.EndPositionOnTrack  + 0.0001), lr_Arg:= THIS^.fTrackLentgh); 
+		fbSortedListMoversInQueue.ListOfMoversToCheck := THIS^.fbAssignedMovers;	
+	bInitDone := TRUE;
 END_IF
 
-				
-								
+IF 	bInitDone THEN
+	fbFeedback.hr := S_OK;	
+END_IF
+							
 Initialize := fbFeedback.hr;]]></ST>
       </Implementation>
     </Method>
@@ -518,6 +786,15 @@ END_VAR
           <ST><![CDATA[PositionOnTrack := fPositionOnTrack;]]></ST>
         </Implementation>
       </Get>
+      <Set Name="Set" Id="{78940b1a-97a9-4b28-8e27-f45ef6f42cdd}">
+        <Declaration><![CDATA[
+VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[THIS^.ChangePos(PositionOnTrack);]]></ST>
+        </Implementation>
+      </Set>
     </Property>
     <Method Name="Prepare" Id="{484693e0-735f-4e7a-9994-8fc0fedb8e2d}">
       <Declaration><![CDATA[(* 
@@ -697,26 +974,9 @@ END_FOR
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="Simulation" Id="{5204600b-7c88-41e4-83d5-d5c55c52d7cc}" FolderPath="Simulation\">
-      <Declaration><![CDATA[METHOD PROTECTED Simulation : HRESULT
-VAR_INST
-	tonSimulationDelay : TON;
-END_VAR]]></Declaration>
-      <Implementation>
-        <ST><![CDATA[//Automatic send mover to next station in Simulation
-//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
-tonSimulationDelay.IN 	:= THIS^.ipXtsSystem.Enabled AND THIS^.MoversInPlace AND THIS^.ProcessSimulationActive;
-tonSimulationDelay.PT	:= LREAL_TO_TIME(THIS^.fSimulationProcessDuration*1000.0);
-tonSimulationDelay();
-IF tonSimulationDelay.Q THEN
-	THIS^.SendMoversToStation(sTargedStation := THIS^.sSimulationTargedStation);
-END_IF
-]]></ST>
-      </Implementation>
-    </Method>
-    <Method Name="SimulationMode" Id="{b00fabf3-03d0-413b-8d4f-5853db268cae}" FolderPath="Simulation\">
+    <Method Name="SimulationStart" Id="{f433c244-2ee8-4a20-9e47-e3d85c563490}" FolderPath="Simulation\">
       <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
-METHOD SimulationMode : HRESULT
+METHOD SimulationStart : HRESULT
 VAR_INPUT
 	fProcessDuration 	: LREAL; //[s]
 	sTargedStation		: STRING; //LUID of the targed station to automatic send after the duration
@@ -735,13 +995,44 @@ IF (fProcessDuration > 0) AND bValideLUID THEN
 	//Valide config
 	THIS^.fSimulationProcessDuration 	:=	fProcessDuration;
 	THIS^.sSimulationTargedStation 		:=	sTargedStation;
-	SimulationMode := S_OK;
+	SimulationStart := S_OK;
 ELSE
 	//Simulation disabled
-	THIS^.fSimulationProcessDuration 	:=	0;
-	THIS^.sSimulationTargedStation 		:=	'';
-	SimulationMode := S_FALSE;
+	THIS^.SimulationStop();
+	SimulationStart := S_FALSE;
 END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SimulationStartEx" Id="{830e0aee-0e8a-4430-97df-c96ae36a3d21}" FolderPath="Simulation\">
+      <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+METHOD SimulationStartEx : HRESULT
+VAR_INPUT
+	fProcessDuration 		: LREAL; //[s]
+	ipStation				: I_Xts_Station_PLC; //unique station to automatic send after the duration
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF ipStation <> 0 THEN
+	SimulationStartEx := THIS^.SimulationStart(fProcessDuration := fProcessDuration, sTargedStation := ipStation.LUID);
+
+ELSE
+	SimulationStartEx := S_FALSE;
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SimulationStop" Id="{5c68d551-bd17-4c65-a0dd-55b7b342a33e}" FolderPath="Simulation\">
+      <Declaration><![CDATA[METHOD SimulationStop : HRESULT
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Simulation disabled
+THIS^.fSimulationProcessDuration 	:=	0;
+THIS^.sSimulationTargedStation 		:=	'';
+
+
 
 ]]></ST>
       </Implementation>
@@ -838,7 +1129,7 @@ END_VAR
       <Declaration><![CDATA[//This sequence tries to transfer the mover to the next station in the direction of travel and checks whether the next station has space for it. 
 //If the next station is a "dummy" that only changes the dynamics of the passing mover, this station is skipped and the next station is searched one ahead.
 //If the station is fully occupied, no action is taken and a new search can be made in the next cycle.
-METHOD PRIVATE TrySendMoverToNextStation : HRESULT
+METHOD PROTECTED TrySendMoverToNextStation : HRESULT
 VAR_INPUT
 	ipMover	: I_XTS_Mover;
 	fVelocity : LREAL;
@@ -980,7 +1271,7 @@ END_IF
 
 
 // Process Simulation. All functionality packed into one method for easier overwriting
-THIS^.Simulation();
+THIS^.UpdateSimulation();
 
 
 // If enabled start station logic
@@ -1026,6 +1317,23 @@ THIS^.UpdateUtilityStation();
 
 // Calculate statistic values like Mover/min of this station. All functionality packed into one method for easier overwriting
 THIS^.UpdateStatistic();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="UpdateSimulation" Id="{5204600b-7c88-41e4-83d5-d5c55c52d7cc}" FolderPath="Simulation\">
+      <Declaration><![CDATA[METHOD PROTECTED UpdateSimulation : HRESULT
+VAR_INST
+	tonSimulationDelay : TON;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//Automatic send mover to next station in Simulation
+//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+tonSimulationDelay.IN 	:= THIS^.ipXtsSystem.Enabled AND THIS^.MoversInPlace AND THIS^.ProcessSimulationActive;
+tonSimulationDelay.PT	:= LREAL_TO_TIME(THIS^.fSimulationProcessDuration*1000.0);
+tonSimulationDelay();
+IF tonSimulationDelay.Q THEN
+	THIS^.SendMoversToStation(sTargedStation := THIS^.sSimulationTargedStation);
+END_IF
+]]></ST>
       </Implementation>
     </Method>
     <Method Name="UpdateStatistic" Id="{15a2ea76-11bb-4663-9a6b-2488950a06ae}" FolderPath="Statistic\">
@@ -1099,7 +1407,7 @@ END_VAR
 
 
 VAR_INST
-	bUtilityStationInitDone : BOOL;
+
 	nOldMoverQueueSize 		: UINT := CHALET_BaseComponents.GVL_Datatypes.cMaxUint;
 	fOldPositionOnTrack 	: LREAL;
 	anBias 					: ARRAY[1..2] OF INT;
@@ -1114,7 +1422,7 @@ END_IF
 
 
 // Initalize
-IF NOT bUtilityStationInitDone THEN
+IF NOT THIS^.bUtilityStationInitDone THEN
 	//Get interface to utility station belongs to this station via OID
     FOR nLoopIndex := 1 TO ipXtsSystem.Environment.UtilityEnvirement.InfoServerTcIo(1).P_InfoStationCount DO
 		IF 	ipXtsSystem.Environment.UtilityEnvirement.InfoServerTcIo(1).P_InfoStationOids[nLoopIndex] = THIS^.OIDStationInfo THEN
@@ -1173,7 +1481,9 @@ IF NOT bUtilityStationInitDone THEN
 		END_IF
 
 	END_IF
-	bUtilityStationInitDone := TRUE;
+	
+	THIS^.bUtilityStationInitDone := TRUE;
+	fOldPositionOnTrack := -1;
 END_IF
 
 
@@ -1185,7 +1495,6 @@ IF (THIS^.ipStationInfo <> 0) AND (THIS^.nMoverQueueSize <> nOldMoverQueueSize O
 	nOldMoverQueueSize := THIS^.nMoverQueueSize;
 	fOldPositionOnTrack := THIS^.fPositionOnTrack;
 	
-	//aPartIDs :=  ipXtsSystem.Environment.UtilityEnvirement.XpuTcIo(1).P_PartOids ;
 	THIS^.ipStationInfo.SetPartObjectIds(ipXtsSystem.Environment.UtilityEnvirement.XpuTcIo(1).P_PartOids);
 	THIS^.ipStationInfo.SetIsEnabled(TRUE);
 

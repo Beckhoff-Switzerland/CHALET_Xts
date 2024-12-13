@@ -76,6 +76,29 @@ PROPERTY LUID : STRING]]></Declaration>
         <Declaration><![CDATA[]]></Declaration>
       </Get>
     </Property>
+    <Property Name="MoverID" Id="{72b1638c-ec32-487f-8823-5ce14d9ec970}">
+      <Declaration><![CDATA[//Returns the ID of the mover.
+{attribute 'monitoring':='call'}
+PROPERTY MoverID : STRING(3)]]></Declaration>
+      <Get Name="Get" Id="{1101389f-dea7-4077-869c-4b04c4c8a4c9}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="NameXtsMover" Id="{55b4d5b0-6bdb-40a1-ba13-26ba8ba9cd6e}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY NameXtsMover : STRING]]></Declaration>
+      <Get Name="Get" Id="{a70d7430-e947-489e-b10c-e441f6e4c0c1}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
+    <Property Name="NcAxis" Id="{b26cc1ec-db8c-4f6b-8a12-97db8a368895}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to the underlying NC axis object. Not all commands may be compatible with the CA group
+PROPERTY NcAxis : I_XTS_Axis]]></Declaration>
+      <Get Name="Get" Id="{f5b14964-58ef-4fa3-a05d-11b94bb4f02c}">
+        <Declaration><![CDATA[]]></Declaration>
+      </Get>
+    </Property>
     <Property Name="PositionOnTrack" Id="{e2f77ef3-bbcd-4011-b83c-ce731f495df1}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY PositionOnTrack : LREAL]]></Declaration>

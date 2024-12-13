@@ -332,9 +332,10 @@ END_VAR
 VAR
 	hr : HRESULT;
 	bWatchDogActive : BOOL;
-	
+	ipTempStation 	: I_XTS_Station;
 	ipTempMover 	: I_XTS_Mover;
 	nIdx 		: UDINT;
+	nSupSeq : UINT;
 END_VAR
 
 VAR_INST
@@ -427,17 +428,40 @@ CASE nSeqEnabling OF
 		END_WHILE
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 110;
+			nSeqEnabling := 100;
 		ELSIF FAILED(hr) THEN
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
+		
 
-	102: // ToDo: Config Station?
+	100..199: // Config Station
+	(* All stations are always active to the same step to ensure that all data is available in the next step.
+	   The following 100 steps are defined in the station. This makes overwriting easier *)
+	   
+		bWatchDogActive := TRUE;
+		nSupSeq := nSeqEnabling - 100;
+		THIS^.fbStations.ResetIterator();
+		WHILE THIS^.fbStations.HasNextObject() DO
+			IF ToStation(THIS^.fbStations.GetNextObject(),ipTempStation) THEN
+				//Call this Methode whith seq 0->99, and wait each step until S_OK is returned. Call agaiin on S_Pending
+				hr := GetMostSignificant(hr, ipTempStation.Configure(nSupSeq));
+			END_IF
+		END_WHILE	   
+	   THIS^.fbStations.RestoreIterator();
+	   
+	   	IF CheckOk(hr) AND nSupSeq >= 99 THEN
+			//All steps done 
+			nSeqEnabling := 210;
+		ELSIF FAILED(hr) THEN
+			//Error
+			nSeqEnabling := 1000 + nSeqEnabling;
+		ELSIF CheckOk(hr) THEN 	 
+			//active step is done, continous with next
+			nSeqEnabling := nSeqEnabling + 1;
+		END_IF	
+
 	
-	103: // ToDo: Configuring Stations?
-	
-	
-	110: // Enable movers
+	210: // Enable movers
 		bWatchDogActive := TRUE;
 		THIS^.fbMovers.ResetIterator();
 		WHILE THIS^.fbMovers.HasNextObject() DO
@@ -447,13 +471,13 @@ CASE nSeqEnabling OF
 		END_WHILE
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 120;
+			nSeqEnabling := 220;
 		ELSE
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
 		
 
-	120: // Enabling movers
+	220: // Enabling movers
 		bWatchDogActive := TRUE;
 		THIS^.fbMovers.ResetIterator();
 		WHILE THIS^.fbMovers.HasNextObject() DO
@@ -463,46 +487,46 @@ CASE nSeqEnabling OF
 		END_WHILE
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 130;
+			nSeqEnabling := 230;
 		ELSIF FAILED(hr) THEN
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF
 		
 		
-	130: // Add movers to group
+	230: // Add movers to group
 		bWatchDogActive := TRUE;
 		hr := THIS^.ipGroup.AddAxisListToGroup(fbMovers);
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 140;
+			nSeqEnabling := 240;
 		ELSE
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
 		
 
-	140: // Adding mover to group
+	240: // Adding mover to group
 		bWatchDogActive := TRUE;
 		hr := THIS^.ipGroup.AddingAxisToGroup();
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 150;
+			nSeqEnabling := 250;
 		ELSIF FAILED(hr) THEN
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF		
 		
 		
-	150: // Enable group
+	250: // Enable group
 		bWatchDogActive := TRUE;
 		hr :=THIS^.ipGroup.Enable();
 		
 		IF CheckOk(hr) THEN 
-			nSeqEnabling := 160;
+			nSeqEnabling := 260;
 		ELSE
 			nSeqEnabling := 1000 + nSeqEnabling;
 		END_IF	
 		
 		
-	160: // Enabling group
+	260: // Enabling group
 		bWatchDogActive := TRUE;
 		hr := THIS^.ipGroup.HR;
 		
@@ -660,7 +684,7 @@ WHILE THIS^.fbStations.HasNextObject() DO
 		fTempDistBetween := ipTempStation.PositionOnTrack - fPosOnTrack;		
 		
 		// if Station is behinde me or it is myself -> add Modulo
-		IF fTempDistBetween <= 0 THEN 
+		IF fTempDistBetween <= 0 AND THIS^.Environment.TrackIsRing THEN 
 			fTempDistBetween := fTempDistBetween + TrackLength;			
 		END_IF
 
@@ -682,20 +706,19 @@ VAR
 	hr : HRESULT;
 END_VAR
 
-VAR
-	fbStationsToCheck : CHALET_BaseComponents.FB_CH_List;
-	ipStationToCheck, ipTempStation : I_XTS_Station;
-END_VAR
+
 VAR_INST
 	//This error cannot be reset. Requires a reset cold
 	{attribute 'hide'}	
 	fbInitError : FB_TcAlarm;
-
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[THIS^.eActiveCommand 					:= CHALET_NC.E_NcAxisCommands.Initialize;
-THIS^.fbFeedback.LastCommandAccepted	:= TRUE;		
-THIS^.fbFeedback.Busy 					:= TRUE;
+        <ST><![CDATA[//Set to busy on first call
+IF THIS^.eActiveCommand <> CHALET_NC.E_NcAxisCommands.Initialize THEN
+	THIS^.eActiveCommand 					:= CHALET_NC.E_NcAxisCommands.Initialize;
+	THIS^.fbFeedback.LastCommandAccepted	:= TRUE;		
+	THIS^.fbFeedback.Busy 					:= TRUE;
+END_IF
 
 
 //Check Error during FB_Init
@@ -711,10 +734,22 @@ IF THIS^.bErrorDuringFbInit THEN
 END_IF	
 
 //Check if Envirement and Group is existing
-IF THIS^.ipEnvironment = 0 OR THIS^.ipGroup = 0 THEN
+IF THIS^.ipGroup = 0 THEN
 	IF NOT fbInitError.bRaised THEN 
 		//This error cannot be reset. Requires a reset cold
-		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.InitializationInvalideParameter, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.MissingGroupe, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
+		fbInitError.Raise(0);
+	END_IF
+	Initialize:= E_FAIL;
+	THIS^.fbFeedback.HR := Initialize;
+	RETURN;
+END_IF	
+
+//Check if Envirement and Group is existing
+IF THIS^.ipEnvironment = 0 THEN
+	IF NOT fbInitError.bRaised THEN 
+		//This error cannot be reset. Requires a reset cold
+		fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.MissingEnvironment, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
 		fbInitError.Raise(0);
 	END_IF
 	Initialize:= E_FAIL;
@@ -723,48 +758,10 @@ IF THIS^.ipEnvironment = 0 OR THIS^.ipGroup = 0 THEN
 END_IF	
 
 
-//Check for stations on the same position
-fbStationsToCheck.Duplicate(THIS^.fbStations);
-// go through the list and search the station in front
-fbStationsToCheck.ResetIterator();
-WHILE fbStationsToCheck.HasNextObject() DO
-	IF ToStation(fbStationsToCheck.GetNextObject(), ipStationToCheck) THEN
-		fbStations.ResetIterator();
-		WHILE THIS^.fbStations.HasNextObject() DO
-			IF ToStation(THIS^.fbStations.GetNextObject(), ipTempStation) THEN
-				// Error - Same LUID(Name) of 2 stations
-				IF (ipStationToCheck.LUID = ipTempStation.LUID) AND (ipStationToCheck <> ipTempStation) THEN
-					IF NOT fbInitError.bRaised THEN 
-						//This error cannot be reset. Requires a reset cold
-						fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.DublicateStationNames, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-						fbInitError.ipArguments.AddStringByValue(ipTempStation.LUID);
-						fbInitError.Raise(0);
-					END_IF
-					Initialize:= E_FAIL;
-					THIS^.fbFeedback.HR := Initialize;
-					RETURN;	
-				END_IF
-				// Error - Same Position of 2 stations
-				IF (ipStationToCheck.PositionOnTrack = ipTempStation.PositionOnTrack) AND (ipStationToCheck <> ipTempStation) THEN
-					IF NOT fbInitError.bRaised THEN 
-						//This error cannot be reset. Requires a reset cold
-						fbInitError.CreateEx(stEventEntry:=TC_EVENTS.CHALET_XTS_Events.DublicateStationPositions, ipSourceInfo := THIS^.fbSourceInfo, bWithConfirmation := FALSE);
-						fbInitError.ipArguments.AddStringByValue(ipTempStation.LUID).AddStringByValue(ipStationToCheck.LUID);
-						fbInitError.Raise(0);
-					END_IF
-					Initialize:= E_FAIL;
-					THIS^.fbFeedback.HR := Initialize;
-					RETURN;	
-				END_IF
-			END_IF
-		END_WHILE
-	END_IF
-END_WHILE
+
 
 //Init Envirement. This includes XTS_Utility
 hr := GetMostSignificant(hr, ipEnvironment.Initialize());	
-
-
 
 //Init envirement first to get access to XTS_Utility
 IF THIS^.ipEnvironment.UtilityEnvirement.P_IsInitialized THEN
@@ -1050,7 +1047,8 @@ END_VAR
       </Get>
     </Property>
     <Property Name="SuppressAllDynamicsChanges" Id="{23fc2564-1b8b-43c9-a70a-d86c8568916c}">
-      <Declaration><![CDATA[PROPERTY SuppressAllDynamicsChanges : BOOL]]></Declaration>
+      <Declaration><![CDATA[//Suppress to change the dynamic(Gap+velocity) of passing movers in all stations. This is usefull in startup
+PROPERTY SuppressAllDynamicsChanges : BOOL]]></Declaration>
       <Set Name="Set" Id="{3f947288-4794-4bf5-8387-996c3acc77ac}">
         <Declaration><![CDATA[VAR
 	ipTempStationPlc : I_XTS_Station_PLC;
@@ -1165,7 +1163,7 @@ hr := GetMostSignificant(hr, THIS^.fbStations.Update());
 hr := GetMostSignificant(hr, THIS^.fbZones.Update());	
 hr := GetMostSignificant(hr, THIS^.fbTriggers.Update());	
 
-//zzz Todo vllt könnte hier das CH_Object verwendet werden
+
 hr := GetMostSignificant(hr, THIS^.ipGroup.Update());	
 hr := GetMostSignificant(hr, THIS^.ipEnvironment.Update());	
 

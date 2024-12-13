@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <Itf Name="I_XTS_Axis" Id="{c4051cb4-6d56-4ace-94cd-2d1b531bffa7}">
+    <Declaration><![CDATA[INTERFACE I_XTS_Axis EXTENDS CHALET_Nc.I_NcAxis_PLC
+]]></Declaration>
+    <Method Name="HaltCA" Id="{dd1383aa-303b-4519-ac7b-2a4396fb5c0f}">
+      <Declaration><![CDATA[METHOD HaltCA : I_CH_Feedback
+VAR_INPUT
+	fDeceleration          : LREAL;
+    fJerk                  : LREAL;
+    fGap                   : LREAL;
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="MoveAbsoluteCA" Id="{d8bd124c-dab8-4d09-8da6-421d05246b3d}">
+      <Declaration><![CDATA[{attribute 'TcRpcEnable':='1'} //call methode via OPC-UA conection
+METHOD MoveAbsoluteCA  : I_CH_Feedback
+VAR_INPUT
+	fPosition		: LREAL;
+	
+	(* This value determines the minimum gap to the predecessor for Collision Avoidance. *)
+	fGap			: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fVelocity		: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fAcceleration	: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fDeceleration	: LREAL;
+	
+	(* Use the default dynamics if input=0. 
+	The default dynamics can be read and written via property and is initialized with the default values in the NC parameter list. *)
+	fJerk			: LREAL;
+	
+	(* Defines the direction of the movement (e.g. for a modulo axis). 
+		input=0 = mcDirectionNonModulo*)
+	eDirection	: Tc3_Mc3Definitions.MC_DIRECTION;
+	
+	(* Use the Aborting mode without buffering if input=0. 
+	BufferModes:
+		-MC_Aborting: Default mode without buffering. The command is executed immediately and interrupts any other command that may be running.
+		-MC_Buffered: The command is executed once no other command is running on the axis. The previous movement continues until it has stopped. The following command is started from standstill. *)
+	eBufferMode   : Tc3_Mc3Definitions.MC_BUFFER_MODE;
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

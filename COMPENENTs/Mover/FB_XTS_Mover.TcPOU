@@ -290,10 +290,12 @@ VAR
 
 END_VAR]]></Declaration>
       <Implementation>
-        <ST><![CDATA[fbFeedback.hr := S_OK;	
-
+        <ST><![CDATA[
 IF NOT THIS^.bInitDone THEN
-	fbFeedback.ActiveCommand := 'Init';
+	THIS^.fbFeedback.ActiveCommand 		:= TO_STRING(E_NcAxisCommands.Initialize);
+	//THIS^.eActiveCommand 				:= E_NcAxisCommands.Initialize;
+	THIS^.fbFeedback.LastCommandAccepted:= TRUE;		
+
 	
 	//Get Tracklength from system
 	THIS^.lrTrackLentgh := THIS^.ipXtsSystem.TrackLength;
@@ -301,7 +303,7 @@ IF NOT THIS^.bInitDone THEN
 	
 	//Validate Settings
 	IF (lrTrackLentgh <= 0) THEN
-		fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);		
+		Initialize := GetMostSignificant(Initialize, E_FAIL);		
 	END_IF
 	
 
@@ -310,7 +312,7 @@ IF NOT THIS^.bInitDone THEN
 		THIS^.ipNextMover := THIS^.ipXtsSystem.getMoverInFront(THIS^);
 		//Validate Settings
 		IF (ipNextMover = 0) THEN
-			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);	
+			Initialize := GetMostSignificant(Initialize, E_FAIL);	
 		END_IF
 	ELSE
 		THIS^.ipNextMover := 0;
@@ -321,18 +323,18 @@ IF NOT THIS^.bInitDone THEN
 		ipUtilityMover := ipXtsSystem.Environment.UtilityEnvirement.GetMoverInterfaceByAxisId(THIS^.getAxisRef.NcToPlc.AxisId);
 		//Validate 
 		IF (ipUtilityMover = 0) THEN
-			fbFeedback.hr := GetMostSignificant(fbFeedback.hr, E_FAIL);	
+			Initialize := GetMostSignificant(Initialize, E_FAIL);	
 		END_IF
 	END_IF
 	
 	
 	//InitAxis
-	fbFeedback.hr := GetMostSignificant(fbFeedback.hr, Axis.Initialize());	
+	Initialize := GetMostSignificant(Initialize, Axis.Initialize());	
 
-	bInitDone := CheckOk(fbFeedback.hr);
+	bInitDone := CheckOk(Initialize);
 END_IF
 
-Initialize := fbFeedback.hr;]]></ST>
+fbFeedback.hr := Initialize;;]]></ST>
       </Implementation>
     </Method>
     <Property Name="LagDistance" Id="{fa2169ed-cf4a-4db4-abdd-b47bb25a427a}" FolderPath="Status\">
@@ -424,6 +426,24 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
+    <Property Name="MoverID" Id="{fbae6463-9f75-425e-93a0-737d83706c86}" FolderPath="Status\">
+      <Declaration><![CDATA[//Returns the ID of the mover.
+{attribute 'monitoring':='call'}
+PROPERTY MoverID : STRING(3)]]></Declaration>
+      <Get Name="Get" Id="{6ac324f5-7f73-473a-8314-abd214dce0c5}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF NOT UtilityMover.P_IsInitialized THEN
+	RETURN;
+END_IF
+
+
+MoverID := UtilityMover.GetMoverId();]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
     <Property Name="MoverInGroup" Id="{1456bf31-7e86-484b-b915-73afc447ac11}" FolderPath="Status\">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY MoverInGroup : BOOL
@@ -455,6 +475,52 @@ END_VAR
 ]]></Declaration>
         <Implementation>
           <ST><![CDATA[Moving := THIS^.Axis.Moving;]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="NameXtsMover" Id="{280fdd2a-7c06-4690-ba89-c3f6ef80aa0a}" FolderPath="Status\">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+PROPERTY NameXtsMover : STRING]]></Declaration>
+      <Get Name="Get" Id="{3ea610a9-4020-4367-bbaa-1d637edbdf56}">
+        <Declaration><![CDATA[VAR
+	ipComObject : ITComObject;
+	sName : STRING;
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[IF NOT UtilityMover.P_IsInitialized THEN
+	RETURN;
+END_IF
+
+///todo zzz: add oid of xts mover
+FW_ObjMgr_GetObjectInstance(oid:= THIS^.UtilityMover.P_AxisOid, iid:= TC_GLOBAL_IID_LIST.IID_ITComObject, pipUnk:= ADR(ipComObject));
+
+IF ipComObject = 0 THEN
+	// Error unknown object id
+	RETURN;
+END_IF
+
+ipComObject.TcGetObjectName(objName := ADR(sName), nameLen := SIZEOF(sName));
+
+
+ipComObject.TcRelease();	
+
+
+NameXtsMover := sName;
+]]></ST>
+        </Implementation>
+      </Get>
+    </Property>
+    <Property Name="NcAxis" Id="{3f097077-e899-485d-a03c-8d8ef646948a}">
+      <Declaration><![CDATA[{attribute 'monitoring':='call'}
+//Interface to the underlying NC axis object. Not all commands may be compatible with the CA group
+PROPERTY NcAxis : I_XTS_Axis]]></Declaration>
+      <Get Name="Get" Id="{a2043ca7-0423-471a-a146-c58f2248b5a3}">
+        <Declaration><![CDATA[VAR
+END_VAR
+]]></Declaration>
+        <Implementation>
+          <ST><![CDATA[NcAxis := THIS^.Axis;]]></ST>
         </Implementation>
       </Get>
     </Property>

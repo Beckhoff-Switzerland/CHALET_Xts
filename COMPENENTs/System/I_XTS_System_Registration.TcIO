@@ -31,13 +31,6 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Method Name="getStationInFront" Id="{7af71673-902d-4864-a1e8-45ff0a26618c}">
-      <Declaration><![CDATA[METHOD getStationInFront : I_XTS_Station
-VAR_INPUT
-	ipStation : I_XTS_Station;
-END_VAR
-]]></Declaration>
-    </Method>
     <Property Name="Initialized" Id="{93d50cf1-3256-432d-af83-a73fa78c626d}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY Initialized : BOOL]]></Declaration>

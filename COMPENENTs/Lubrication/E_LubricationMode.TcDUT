@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <DUT Name="E_LubricationMode" Id="{377c692d-3be3-43aa-b41d-3f9425f56c5b}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+TYPE E_LubricationMode :
+(
+	TimeBased,
+	DistanceBased,
+	Continous
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

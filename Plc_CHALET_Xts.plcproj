@@ -18,7 +18,7 @@
     <Company>Beckhoff CH</Company>
     <Released>false</Released>
     <Title>CHALET_Xts</Title>
-    <ProjectVersion>4.0.4</ProjectVersion>
+    <ProjectVersion>4.2.1</ProjectVersion>
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="COMPENENTs" />
@@ -27,6 +27,9 @@
     <Folder Include="COMPENENTs\Mover" />
     <Folder Include="COMPENENTs\Environment" />
     <Folder Include="COMPENENTs\Mover\ProductData" />
+    <Folder Include="COMPENENTs\Lubrication">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </Folder>
     <Folder Include="COMPENENTs\Zone" />
     <Folder Include="COMPENENTs\Trigger" />
     <Folder Include="COMPENENTs\Station" />
@@ -74,12 +77,21 @@
     <Compile Include="COMPENENTs\Group\I_XTS_Group.TcIO">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="COMPENENTs\Lubrication\E_LubricationMode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPENENTs\Lubrication\E_SystemType.TcTLEO">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="COMPENENTs\Mover\FB_XTS_Axis.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPENENTs\Mover\FB_XTS_Mover.TcPOU">
       <SubType>Code</SubType>
       <External>false</External>
+    </Compile>
+    <Compile Include="COMPENENTs\Mover\I_XTS_Axis.TcIO">
+      <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPENENTs\Mover\I_XTS_Mover.TcIO">
       <SubType>Code</SubType>
@@ -91,6 +103,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPENENTs\Mover\ProductData\I_XTS_ProductData.TcIO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="COMPENENTs\Lubrication\FB_LubricationXTS.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="COMPENENTs\Station\FB_XTS_Station.TcPOU">
@@ -201,6 +216,10 @@
     </PlaceholderReference>
   </ItemGroup>
   <ItemGroup>
+    <SubObject Include="FB_XTS_Station.GetStationBehinde" />
+    <SubObject Include="FB_XTS_System.getStationInFront">
+      <ExcludeFromBuild>true</ExcludeFromBuild>
+    </SubObject>
     <SubObject Include="I_XTS_ProductData.LinkedMover" />
     <SubObject Include="I_XTS_Station.MoverGapAtExit.Set">
       <ExcludeFromBuild>true</ExcludeFromBuild>
@@ -398,8 +417,8 @@
   <ProjectExtensions>
     <PlcProjectOptions>
       <XmlArchive>
-        <Data>
-          <o xml:space="preserve" t="OptionKey">
+  <Data>
+    <o xml:space="preserve" t="OptionKey">
       <v n="Name">"&lt;ProjectRoot&gt;"</v>
       <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
         <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
@@ -452,7 +471,7 @@
                   <d n="SubKeys" t="Hashtable" />
                   <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
                     <v>bActive</v>
-                    <v>False</v>
+                    <v>True</v>
                   </d>
                 </o>
                 <v>6</v>
@@ -521,14 +540,14 @@
       </d>
       <d n="Values" t="Hashtable" />
     </o>
-        </Data>
-        <TypeList>
-          <Type n="Boolean">System.Boolean</Type>
-          <Type n="Hashtable">System.Collections.Hashtable</Type>
-          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
-          <Type n="String">System.String</Type>
-        </TypeList>
-      </XmlArchive>
+  </Data>
+  <TypeList>
+    <Type n="Boolean">System.Boolean</Type>
+    <Type n="Hashtable">System.Collections.Hashtable</Type>
+    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+    <Type n="String">System.String</Type>
+  </TypeList>
+</XmlArchive>
     </PlcProjectOptions>
   </ProjectExtensions>
 </Project>

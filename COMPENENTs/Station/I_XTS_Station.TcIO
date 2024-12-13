@@ -10,6 +10,14 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
+    <Method Name="Configure" Id="{dfd1febc-b72b-4834-bea4-0048c8f97b04}">
+      <Declaration><![CDATA[//Call this Methode whith seq 0->99, and wait each step until S_OK is returned
+METHOD Configure : HRESULT
+VAR_INPUT
+	nSeq : UINT; //0->100
+END_VAR
+]]></Declaration>
+    </Method>
     <Property Name="CtsEmptySpaceInQueue" Id="{80790399-3f9b-44a8-a885-28b318172fd5}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
 PROPERTY CtsEmptySpaceInQueue : UDINT]]></Declaration>

@@ -2,7 +2,7 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
   <POU Name="FB_XTS_Axis" Id="{c9be247b-dca5-42bd-9f26-7365b340e63a}" SpecialFunc="None">
     <Declaration><![CDATA[{attribute 'no_explicit_call' := 'Do not call the body - Stick to OOP'}
-FUNCTION_BLOCK FB_XTS_Axis EXTENDS CHALET_NC.FB_NcAxis
+FUNCTION_BLOCK FB_XTS_Axis EXTENDS CHALET_NC.FB_NcAxis IMPLEMENTS I_XTS_Axis
 VAR
 	{attribute 'hide'}
 	fbMoveAbsoluteCA		: ARRAY [0..1] OF MC_MoveAbsoluteCA;//A second function block is always required to use the BufferMode. It is not possible to trigger a move function block with new parameters while it is active.

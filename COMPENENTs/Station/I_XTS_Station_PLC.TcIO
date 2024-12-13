@@ -95,13 +95,27 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
     </Method>
-    <Method Name="SimulationMode" Id="{d6802eb0-3144-49ab-bba2-dbcd9bfab5dc}" FolderPath="Simulation\">
+    <Method Name="SimulationStart" Id="{4455c854-ccc4-4c79-8b12-75eea6adf457}" FolderPath="Simulation\">
       <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
-METHOD SimulationMode : HRESULT
+METHOD SimulationStart : HRESULT
 VAR_INPUT
 	fProcessDuration 	: LREAL; //[s]
 	sTargedStation		: STRING; //LUID of the targed station to automatic send after the duration
-END_VAR]]></Declaration>
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SimulationStartEx" Id="{335c4ff8-afb5-4d3d-9388-94804580560f}" FolderPath="Simulation\">
+      <Declaration><![CDATA[//If a valid time (>0seconds) is set and the configured destination station exists, then the movers will be sent away automatically after this time from now on.
+METHOD SimulationStartEx : HRESULT
+VAR_INPUT
+	fProcessDuration 		: LREAL; //[s]
+	ipStation				: I_Xts_Station_PLC; //unique station to automatic send after the duration
+END_VAR
+]]></Declaration>
+    </Method>
+    <Method Name="SimulationStop" Id="{e562dd1e-1297-41c0-8396-bdd0d555dfec}" FolderPath="Simulation\">
+      <Declaration><![CDATA[METHOD SimulationStop : HRESULT
+]]></Declaration>
     </Method>
     <Property Name="SuppressDynamicsChange" Id="{8dd724d4-7d4b-4ca2-a807-764f9e122ee0}">
       <Declaration><![CDATA[{attribute 'monitoring':='call'}
